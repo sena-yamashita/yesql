@@ -53,22 +53,37 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - コミット後、ユーザーが要求した場合のみpushを実行
 - または、作業セッション終了時にユーザーに確認してからpush
 
-## 作業管理
+## プロジェクト概要
 
-ToDo.mdを作成し、ToDoの内容、状況、進捗、残件、課題を管理するようにしてください。
+- YesQLのマルチドライバー対応実装（v2.0.0）
+- 現在サポート: PostgreSQL (Postgrex/Ecto), DuckDB
+- プロトコルベースのドライバーアーキテクチャ
+- 詳細な実装状態は `NewSystemConfiguration.md` を参照
+- タスク管理は `ToDo.md` を参照
 
-## 概要
+## 今後の開発方針
 
-- 現状のyesqlを複数のドライバが対応できるようにカスタマイズする
-- まず、しっかりと既存のコードを把握するようにしてください。
-- 把握した内容は、SystemConfiguration.mdに記載をしてください。
-- その後、duckdb対応をする。
-- duckdb利用ドライバは、https://github.com/AlexR2D2/duckdbex を利用する。
-- 今後、MySQLや、MSSQL、Oracle等のドライバを対応していく。優先度最低
+### 新規ドライバー追加手順
+1. `lib/yesql/driver/` にドライバーモジュールを作成
+2. `Yesql.Driver` プロトコルを実装
+3. `Yesql.DriverFactory` に追加
+4. テストスイートを `test/drivers/` に追加
+5. ドキュメントを更新
+
+### コード品質の維持
+- すべての変更にはテストを含める
+- 既存APIの後方互換性を維持
+- パフォーマンスへの影響を考慮
+
+### 優先順位
+1. 高：既存機能の安定性維持
+2. 中：パフォーマンス最適化
+3. 低：追加ドライバー対応（MySQL、MSSQL、Oracle）
 
 ## 参考
 
-https://github.com/tschnibo/yesql/tree/dev
+- オリジナルフォーク元: https://github.com/lpil/yesql
+- 参考実装: https://github.com/tschnibo/yesql/tree/dev
 
 ## 開発コマンド
 
@@ -83,11 +98,14 @@ mix compile
 # テストの実行（PostgreSQLが必要）
 mix test
 
-# 特定のテストファイルを実行
-mix test test/yesql_test.exs
+# DuckDBテストの実行
+DUCKDB_TEST=true mix test test/duckdb_test.exs
 
-# 特定のテストケースを実行（行番号指定）
-mix test test/yesql_test.exs:42
+# 自動テスト（ファイル変更を監視）
+mix test.watch
+
+# ドキュメント生成
+mix docs
 
 # インタラクティブシェル
 iex -S mix
@@ -99,31 +117,6 @@ iex -S mix
 createdb yesql_test
 ```
 
-## アーキテクチャ概要
-
-### コア構造
-- **lib/yesql.ex**: メインモジュール、`defquery`マクロを提供
-- **lib/yesql/tokenizer.ex**: SQLファイルのトークナイザー（Leex使用）
-- **src/sql_tokenizer.xrl**: Leexトークナイザー定義ファイル
-
-### 主要な抽象化
-1. **SQLトークナイザー**: SQLファイルを解析し、名前付きパラメータ（`:name`）を検出
-2. **パラメータ変換**: 名前付きパラメータをデータベース固有の形式に変換
-   - PostgreSQL: `:name` → `$1`, `$2`...
-   - DuckDB対応時: 適切な形式への変換が必要
-3. **結果変換**: データベースの結果をElixirのデータ構造に変換
-
-### 現在の制限事項
-- ドライバーサポートがハードコード（`@supported_drivers [:postgrex, :ecto]`）
-- ドライバー固有のロジックが`yesql.ex`に直接実装
-- 新しいドライバー追加には大幅なリファクタリングが必要
-
-### DuckDB対応の方針
-1. ドライバーインターフェースの抽象化（プロトコルまたはビヘイビア）
-2. DuckDBexドライバーの統合
-3. パラメータ変換ロジックの拡張
-4. 結果セット変換の実装
-
 ## 技術詳細
 
 ### プロジェクト構成
@@ -132,39 +125,16 @@ createdb yesql_test
 - **最小Elixirバージョン**: 1.5以上
 - **テストフレームワーク**: ExUnit
 
-### 開発コマンド
-```bash
-# 依存関係のインストール
-mix deps.get
+### アーキテクチャ概要
+- **プロトコルベースのドライバーシステム**: `Yesql.Driver`
+- **動的ドライバー作成**: `Yesql.DriverFactory`
+- **SQLトークナイザー**: Leexを使用した名前付きパラメータ解析
+- **コンパイル時マクロ**: `defquery`による関数生成
 
-# テストの実行（PostgreSQLが必要）
-createdb yesql_test
-mix test
-
-# 自動テスト（ファイル変更を監視）
-mix test.watch
-
-# ドキュメント生成
-mix docs
-
-# コンパイル
-mix compile
-```
-
-### 現在のアーキテクチャ
-詳細は `SystemConfiguration.md` を参照してください。主要ポイント：
-- SQLトークナイザー（Leex使用）でSQLファイルを解析
-- コンパイル時にマクロでElixir関数を生成
-- 現在サポートドライバー: Postgrex, Ecto
-- ドライバー実装がハードコードされている
-
-### DuckDB対応で必要な主要変更
-1. ドライバーインターフェースの抽象化（ビヘイビアまたはプロトコル）
-2. ドライバー固有のパラメータ変換ロジック
-3. 結果セット変換の柔軟化
-4. DuckDBexライブラリの統合
+詳細な実装については `NewSystemConfiguration.md` を参照。
 
 ### 注意事項
 - Elixir 1.18.4では、Ecto 3.5.xとの互換性問題あり
 - Windows改行文字（\r\n）のサポートはv1.0.1で対応済み
+- DuckDBテストは環境変数 `DUCKDB_TEST=true` で有効化
 
