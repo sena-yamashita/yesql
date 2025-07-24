@@ -1,21 +1,18 @@
 # Yesql
 
-Yesql is an Elixir library for _using_ SQL.
+YesqlはSQLを_使用する_ためのElixirライブラリです。
 
-## Rationale
+## 理論的根拠
 
-You're writing Elixir You need to write some SQL.
+ElixirでSQLを書く必要がある場合があります。
 
-One option is to use [Ecto](https://github.com/elixir-ecto/ecto/),
-which provides a sophisticated DSL for generating database queries at
-runtime. This can be convenient for simple use, but its abstraction
-only works with the simplest and common database features. Because of
-this either the abstraction breaks down and we start passing raw strings
-to `Repo.query` and `fragment`, or we will neglect these database
-features altogether.
+選択肢の1つは[Ecto](https://github.com/elixir-ecto/ecto/)を使用することです。
+Ectoは実行時にデータベースクエリを生成するための洗練されたDSLを提供します。
+これは単純な用途には便利ですが、その抽象化は最も単純で一般的なデータベース機能でしか機能しません。
+このため、抽象化が破綻して`Repo.query`や`fragment`に生のSQL文字列を渡し始めるか、
+これらのデータベース機能を完全に無視することになります。
 
-So what's the solution? Keep the SQL as SQL. Have one file with your
-query:
+では、解決策は何でしょうか？SQLをSQLのまま保つことです。クエリを含む1つのファイルを用意します：
 
 ``` sql
 SELECT *
@@ -23,8 +20,7 @@ FROM users
 WHERE country_code = :country_code
 ```
 
-...and then read that file to turn it into a regular Elixir function at
-compile time:
+...そして、コンパイル時にそのファイルを読み込んで通常のElixir関数に変換します：
 
 ```elixir
 defmodule Query do
@@ -33,99 +29,92 @@ defmodule Query do
   Yesql.defquery("some/where/select_users_by_country.sql")
 end
 
-# A function with the name `users_by_country/1` has been created.
-# Let's use it:
-iex> Query.users_by_country(country_code: "gbr")
-{:ok, [%{name: "Louis", country_code: "gbr"}]}
+# `users_by_country/1`という名前の関数が作成されました。
+# 使ってみましょう：
+iex> Query.users_by_country(country_code: "jpn")
+{:ok, [%{name: "太郎", country_code: "jpn"}]}
 ```
 
-By keeping the SQL and Elixir separate you get:
+SQLとElixirを分離することで、以下の利点が得られます：
 
-- No syntactic surprises. Your database doesn't stick to the SQL
-  standard - none of them do - but Yesql doesn't care. You will
-  never spend time hunting for "the equivalent Ecto syntax". You will
-  never need to fall back to a `fragment("some('funky'::SYNTAX)")` function.
-- Better editor support. Your editor probably already has great SQL
-  support. By keeping the SQL as SQL, you get to use it.
-- Team interoperability. DBAs and developers less familiar with Ecto can
-  read and write the SQL you use in your Elixir project.
-- Easier performance tuning. Need to `EXPLAIN` that query plan? It's
-  much easier when your query is ordinary SQL.
-- Query reuse. Drop the same SQL files into other projects, because
-  they're just plain ol' SQL. Share them as a submodule.
-- Simplicity. This is a very small library, it is easier to understand
-  and review than Ecto and similar.
-
-
-### When Should I Not Use Yesql?
-
-When you need your SQL to work with many different kinds of
-database at once. If you want one complex query to be transparently
-translated into different dialects for MySQL, Oracle, Postgres etc.,
-then you genuinely do need an abstraction layer on top of SQL.
+- 構文上の驚きがない。データベースはSQL標準に準拠していません - どのデータベースもそうです - 
+  しかしYesqlは気にしません。「同等のEcto構文」を探す時間を無駄にすることはありません。
+  `fragment("some('funky'::SYNTAX)")`関数にフォールバックする必要もありません。
+- より良いエディタサポート。エディタにはおそらく優れたSQLサポートがすでにあります。
+  SQLをSQLのまま保つことで、それを使用できます。
+- チームの相互運用性。DBAやEctoに不慣れな開発者も、Elixirプロジェクトで使用するSQLを
+  読み書きできます。
+- パフォーマンスチューニングが簡単。クエリプランを`EXPLAIN`する必要がありますか？
+  クエリが通常のSQLの場合、はるかに簡単です。
+- クエリの再利用。同じSQLファイルを他のプロジェクトにドロップできます。
+  なぜならそれらは単なるプレーンなSQLだからです。サブモジュールとして共有できます。
+- シンプルさ。これは非常に小さなライブラリであり、Ectoや類似のものよりも理解しやすく、
+  レビューしやすいです。
 
 
-## Alternatives
+### Yesqlを使用すべきでない場合
 
-We've talked about Ecto, but how does Yesql compare to `$OTHER_LIBRARY`?
+多くの異なる種類のデータベースで同時に動作するSQLが必要な場合。
+1つの複雑なクエリをMySQL、Oracle、Postgresなどの異なる方言に透過的に変換したい場合は、
+SQL上の抽象化レイヤーが本当に必要です。
+
+
+## 代替案
+
+Ectoについて話しましたが、Yesqlは`$OTHER_LIBRARY`とどのように比較されますか？
 
 ### [eql](https://github.com/artemeff/eql)
 
-eql is an Erlang library with similar inspiration and goals.
+eqlは同様のインスピレーションと目標を持つErlangライブラリです。
 
-- eql offers no solution for query execution, the library user has to
-  implement this. Yesql offers a friendly API.
-- Being an Erlang library eql has to compile the queries at runtime, Yesql
-  does this at compile time so you don't need to write initialisation code and
-  store your queries somewhere.
-- eql requires the `neotoma` PEG compiler plugin, Yesql only uses the Elixir
-  standard library.
-- Yesql uses prepared statements so query parameters are sanitised and are
-  only valid in positions that your database will accept parameters. eql
-  functions more like a templating tool so parameters can be used in any
-  position and sanitisation is left up to the user.
-- A subjective point, but I believe the Yesql's implementation is simpler than
-  eql's, while offering more features.
+- eqlはクエリ実行のソリューションを提供しません。ライブラリユーザーが実装する必要があります。
+  YesqlはフレンドリーなAPIを提供します。
+- Erlangライブラリであるeqlはクエリをランタイムでコンパイルする必要がありますが、
+  Yesqlはコンパイル時に行うため、初期化コードを書いたりクエリをどこかに保存したりする必要がありません。
+- eqlは`neotoma` PEGコンパイラプラグインが必要ですが、YesqlはElixir標準ライブラリのみを使用します。
+- Yesqlはプリペアドステートメントを使用するため、クエリパラメータはサニタイズされ、
+  データベースがパラメータを受け入れる位置でのみ有効です。eqlはテンプレートツールのように機能するため、
+  パラメータは任意の位置で使用でき、サニタイゼーションはユーザーに任されています。
+- 主観的な点ですが、Yesqlの実装はeqlよりもシンプルでありながら、より多くの機能を提供していると思います。
 
 ### [ayesql](https://github.com/alexdesousa/ayesql)
 
-ayesql is another Elixir library, a bit more powerful than yesql:
+ayesqlは別のElixirライブラリで、yesqlよりも少し強力です：
 
-- It offers support for various SQL statements in a single file.
-- Special constructs for [query composability](https://hexdocs.pm/ayesql/readme.html#query-composition) in SQL files.
-- Special constructs for [optional parameters](https://hexdocs.pm/ayesql/readme.html#optional-parameters) in SQL files.
+- 単一ファイル内の様々なSQL文のサポートを提供します。
+- SQLファイル内での[クエリの構成可能性](https://hexdocs.pm/ayesql/readme.html#query-composition)のための特別な構成。
+- SQLファイル内での[オプションパラメータ](https://hexdocs.pm/ayesql/readme.html#optional-parameters)のための特別な構成。
 
-yesql will keep your SQL queries closer to canonical SQL, but if you start finding
-it limiting or convoluted maybe it would be a good time to check out more powerful
-abstractions like ayesql or Ecto.
+yesqlはSQLクエリを標準的なSQLにより近い形で保ちますが、制限や複雑さを感じ始めたら、
+ayesqlやEctoのようなより強力な抽象化をチェックする良い時期かもしれません。
 
-## Supported Drivers
+## サポートされているドライバー
 
-Yesql supports multiple database drivers:
+Yesqlは複数のデータベースドライバーをサポートしています：
 
-- **Postgrex** - PostgreSQL driver
-- **Ecto** - Use with any Ecto repo
-- **DuckDB** - Analytical database via DuckDBex
+- **Postgrex** - PostgreSQLドライバー
+- **Ecto** - 任意のEctoリポジトリで使用
+- **DuckDB** - DuckDBex経由の分析データベース
 
-### Using with DuckDB
+### DuckDBでの使用
 
 ```elixir
 defmodule Analytics do
   use Yesql, driver: :duckdb
 
-  # Open DuckDB connection
+  # DuckDB接続を開く
   {:ok, db} = Duckdbex.open("analytics.duckdb")
   {:ok, conn} = Duckdbex.connection(db)
 
-  # Define your query
+  # クエリを定義
   Yesql.defquery("analytics/aggregate_sales.sql")
   
-  # Use it
+  # 使用する
   Analytics.aggregate_sales(conn, start_date: "2024-01-01")
 end
 ```
 
-## Development & Testing
+## 開発とテスト
 
 ```sh
 createdb yesql_test
@@ -134,12 +123,12 @@ mix test
 ```
 
 
-## Other Languages
+## 他の言語
 
-Yesql ~~rips off~~ is inspired by [Kris Jenkins' Clojure Yesql](https://github.com/krisajenkins/yesql).
-Similar libraries can be found for many languages:
+Yesqlは[Kris JenkinsのClojure Yesql](https://github.com/krisajenkins/yesql)に~~パクり~~インスパイアされています。
+多くの言語で同様のライブラリが見つかります：
 
-| Language   | Project                                            |
+| 言語       | プロジェクト                                        |
 | ---        | ---                                                |
 | C#         | [JaSql](https://bitbucket.org/rick/jasql)          |
 | Clojure    | [YeSPARQL](https://github.com/joelkuiper/yesparql) |
@@ -155,6 +144,6 @@ Similar libraries can be found for many languages:
 | Ruby       | [yayql](https://github.com/gnarmis/yayql)          |
 
 
-## License
+## ライセンス
 
 Copyright © 2018 Louis Pilfold. All Rights Reserved.
