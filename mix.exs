@@ -4,7 +4,7 @@ defmodule Yesql.Mixfile do
   def project do
     [
       app: :yesql,
-      version: "1.0.1",
+      version: "2.0.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),

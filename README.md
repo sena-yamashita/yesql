@@ -1,6 +1,11 @@
 # Yesql
 
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/yesql)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+
 YesqlはSQLを_使用する_ためのElixirライブラリです。
+
+> **注**: このリポジトリは[lpil/yesql](https://github.com/lpil/yesql)のフォークで、マルチドライバー対応を追加したものです。
 
 ## 理論的根拠
 
@@ -144,6 +149,45 @@ Yesqlは[Kris JenkinsのClojure Yesql](https://github.com/krisajenkins/yesql)に
 | Ruby       | [yayql](https://github.com/gnarmis/yayql)          |
 
 
-## ライセンス
+## このフォークについて
+
+このリポジトリは、オリジナルの[lpil/yesql](https://github.com/lpil/yesql) v1.0.1からフォークし、マルチドライバー対応を追加したものです。
+
+### v2.0.0での追加機能
+
+- **マルチドライバー対応**: ドライバー抽象化レイヤーの実装により、新しいデータベースドライバーの追加が容易になりました
+- **DuckDBサポート**: [DuckDBex](https://github.com/AlexR2D2/duckdbex)を使用したDuckDBドライバーの実装
+- **日本語ドキュメント**: 全てのドキュメントを日本語化
+
+### 開発について
+
+このマルチドライバー対応の実装は、[Claude Code](https://claude.ai/code)を使用して開発されました。
+Claude Codeは、AIペアプログラミングツールとして、以下の作業を支援しました：
+
+- アーキテクチャ設計と実装
+- ドライバー抽象化レイヤーの構築
+- テストスイートの作成
+- ドキュメントの作成と翻訳
+
+詳細な実装履歴は、コミットログを参照してください。各コミットメッセージには `🤖 Generated with Claude Code` が含まれています。
+
+### 変更履歴
+
+詳細な変更内容については[CHANGELOG.md](CHANGELOG.md)を参照してください。
+
+## オリジナルライセンス
 
 Copyright © 2018 Louis Pilfold. All Rights Reserved.
+
+## フォーク版の追加実装
+
+マルチドライバー対応の実装:
+- Copyright © 2024 Daisuke Yamashita
+- Copyright © 2024 SENA Networks, Inc.
+
+このフォーク版も、オリジナルと同じApache 2.0ライセンスの下で公開されています。
+
+### 貢献者
+
+- **Daisuke Yamashita** (SENA Networks, Inc.) - マルチドライバー対応の設計と実装
+- **Claude Code** (Anthropic) - AIペアプログラミングツールとしての開発支援
