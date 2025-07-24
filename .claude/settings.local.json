@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mix test)",
+      "Bash(mix deps.get:*)",
+      "Bash(elixir:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git add:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mix compile)",
+      "Bash(mix deps.update:*)",
+      "Bash(mix compile:*)",
+      "Bash(git commit:*)",
+      "Bash(mix test:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(gh release create:*)",
+      "Bash(--title \"v2.0.0 - マルチドライバー対応\" )",
+      "Bash(--notes-file RELEASE_NOTES_v2.0.0.md )",
+      "Bash(--target master)",
+      "Bash(mv:*)"
+    ],
+    "deny": []
+  }
+}
