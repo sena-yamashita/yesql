@@ -1,18 +1,18 @@
-# Multi-Driver Configuration
+# マルチドライバー設定
 
-Yesql now supports multiple database drivers through a flexible driver abstraction layer. This guide explains how to configure and use different drivers in your application.
+Yesqlは柔軟なドライバー抽象化レイヤーを通じて、複数のデータベースドライバーをサポートします。このガイドでは、アプリケーションで異なるドライバーを設定して使用する方法を説明します。
 
-## Available Drivers
+## 利用可能なドライバー
 
-- **Postgrex** - PostgreSQL database driver
-- **Ecto** - Works with any Ecto repository
-- **DuckDB** - Analytical database for OLAP workloads
+- **Postgrex** - PostgreSQLデータベースドライバー
+- **Ecto** - 任意のEctoリポジトリで動作
+- **DuckDB** - OLAP用途の分析データベース
 
-## Configuration Options
+## 設定オプション
 
-### Module-level Configuration
+### モジュールレベルの設定
 
-Configure the driver at the module level using the `use` macro:
+`use`マクロを使用してモジュールレベルでドライバーを設定します：
 
 ```elixir
 defmodule MyApp.Queries do
@@ -22,28 +22,28 @@ defmodule MyApp.Queries do
 end
 ```
 
-### Per-Query Configuration
+### クエリ毎の設定
 
-Override the driver for specific queries:
+特定のクエリに対してドライバーをオーバーライドできます：
 
 ```elixir
 defmodule MyApp.Queries do
   use Yesql
   
-  # Uses PostgreSQL
+  # PostgreSQLを使用
   Yesql.defquery("queries/users.sql", driver: :postgrex)
   
-  # Uses DuckDB for analytics
+  # 分析用にDuckDBを使用
   Yesql.defquery("queries/analytics.sql", driver: :duckdb)
 end
 ```
 
-## Driver-Specific Setup
+## ドライバー固有のセットアップ
 
-### PostgreSQL with Postgrex
+### PostgreSQL (Postgrex)
 
 ```elixir
-# In your application startup
+# アプリケーション起動時
 {:ok, pid} = Postgrex.start_link(
   hostname: "localhost",
   database: "myapp_dev",
@@ -52,7 +52,7 @@ end
   pool_size: 10
 )
 
-# In your query module
+# クエリモジュール内
 defmodule MyApp.PostgresQueries do
   use Yesql, driver: :postgrex, conn: pid
   
@@ -60,7 +60,7 @@ defmodule MyApp.PostgresQueries do
 end
 ```
 
-### Ecto Repository
+### Ectoリポジトリ
 
 ```elixir
 defmodule MyApp.Queries do
@@ -69,14 +69,14 @@ defmodule MyApp.Queries do
   Yesql.defquery("queries/users.sql")
 end
 
-# Usage
-MyApp.Queries.users_by_country(country: "USA")
+# 使用方法
+MyApp.Queries.users_by_country(country: "JPN")
 ```
 
 ### DuckDB
 
 ```elixir
-# Setup DuckDB connection
+# DuckDB接続のセットアップ
 {:ok, db} = Duckdbex.open("analytics.duckdb")
 {:ok, conn} = Duckdbex.connection(db)
 
@@ -86,15 +86,15 @@ defmodule MyApp.Analytics do
   Yesql.defquery("queries/revenue_report.sql")
 end
 
-# Usage
+# 使用方法
 MyApp.Analytics.revenue_report(conn, year: 2024)
 ```
 
-## Parameter Formats
+## パラメータ形式
 
-Different databases use different parameter formats, but Yesql handles the conversion automatically:
+異なるデータベースは異なるパラメータ形式を使用しますが、Yesqlは自動的に変換を処理します：
 
-### SQL File (uses named parameters)
+### SQLファイル（名前付きパラメータを使用）
 ```sql
 -- queries/find_user.sql
 SELECT * FROM users
@@ -102,62 +102,62 @@ WHERE email = :email
   AND active = :active
 ```
 
-### Generated SQL by Driver
+### ドライバーによって生成されるSQL
 - **PostgreSQL/DuckDB**: `SELECT * FROM users WHERE email = $1 AND active = $2`
-- **MySQL** (future): `SELECT * FROM users WHERE email = ? AND active = ?`
+- **MySQL**（将来）: `SELECT * FROM users WHERE email = ? AND active = ?`
 
-## Dependencies
+## 依存関係
 
-Add the required driver dependencies to your `mix.exs`:
+必要なドライバー依存関係を`mix.exs`に追加します：
 
 ```elixir
 defp deps do
   [
-    # For PostgreSQL
+    # PostgreSQL用
     {:postgrex, "~> 0.15", optional: true},
     
-    # For Ecto
+    # Ecto用
     {:ecto, "~> 3.4", optional: true},
     {:ecto_sql, "~> 3.4", optional: true},
     
-    # For DuckDB
+    # DuckDB用
     {:duckdbex, "~> 0.3.9", optional: true},
     
-    # Yesql itself
+    # Yesql本体
     {:yesql, "~> 1.0"}
   ]
 end
 ```
 
-## Checking Available Drivers
+## 利用可能なドライバーの確認
 
-You can check which drivers are available at runtime:
+実行時に利用可能なドライバーを確認できます：
 
 ```elixir
 iex> Yesql.DriverFactory.available_drivers()
 [:postgrex, :ecto, :duckdb]
 ```
 
-## Error Handling
+## エラーハンドリング
 
-If you try to use a driver that isn't loaded:
+読み込まれていないドライバーを使用しようとした場合：
 
 ```elixir
-# If DuckDBex is not in your dependencies
+# DuckDBexが依存関係にない場合
 defmodule MyApp.Queries do
-  use Yesql, driver: :duckdb  # Will raise an error
+  use Yesql, driver: :duckdb  # エラーが発生します
 end
 ```
 
-Error message: `Driver duckdb is not loaded. Make sure the required library is in your dependencies.`
+エラーメッセージ: `Driver duckdb is not loaded. Make sure the required library is in your dependencies.`
 
-## Future Drivers
+## 将来的なドライバー
 
-The driver system is designed to be extensible. Future versions may include:
+ドライバーシステムは拡張可能に設計されています。将来のバージョンでは以下が含まれる可能性があります：
 
-- MySQL via MyXQL
-- Microsoft SQL Server via TDS
+- MyXQL経由でのMySQL
+- TDS経由でのMicrosoft SQL Server
 - Oracle Database
 - SQLite
 
-To implement a custom driver, create a module that implements the `Yesql.Driver` protocol.
+カスタムドライバーを実装するには、`Yesql.Driver`プロトコルを実装するモジュールを作成してください。

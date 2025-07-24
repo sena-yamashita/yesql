@@ -1,9 +1,8 @@
 # Ecto
 
-## Install dependencies
+## 依存関係のインストール
 
-We only need the `postgrex` and `ecto_sql` dependencies, but it doesn't hurt
-to also add `ecto`:
+`postgrex`と`ecto_sql`の依存関係のみ必要ですが、`ecto`も追加しても問題ありません：
 
 ```elixir
 defp deps do
@@ -16,12 +15,11 @@ defp deps do
 end
 ```
 
-## Start ecto process
+## Ectoプロセスの起動
 
-At the ecto docs we can find an excellent [configuration guide](https://hexdocs.pm/ecto/Ecto.html#module-repositories)
-for adding ecto to your project.
+Ectoのドキュメントには、プロジェクトにEctoを追加するための優れた[設定ガイド](https://hexdocs.pm/ecto/Ecto.html#module-repositories)があります。
 
-First we declare our Repo module:
+まず、Repoモジュールを宣言します：
 
 ```elixir
 defmodule Repo do
@@ -31,7 +29,7 @@ defmodule Repo do
 end
 ```
 
-And add it to our supervision tree:
+そして、それをスーパーバイザーツリーに追加します：
 
 ```elixir
 defmodule MyApp.Application do
@@ -52,10 +50,9 @@ defmodule MyApp.Application do
 end
 ```
 
-## Declare in yesql
+## Yesqlでの宣言
 
-Then declare your yesql module by specifying you want to use ecto
-along with the ecto process:
+次に、EctoとEctoプロセスを使用することを指定して、Yesqlモジュールを宣言します：
 
 ```elixir
 defmodule Query do
@@ -69,6 +66,6 @@ end
 Query.now []
 # => {:ok, [%{now: ~U[2020-05-09 21:22:54.680122Z]}]}
 
-Query.users_by_country(country_code: "gbr")
-# => {:ok, [%{name: "Louis", country_code: "gbr"}]}
+Query.users_by_country(country_code: "jpn")
+# => {:ok, [%{name: "太郎", country_code: "jpn"}]}
 ```

@@ -1,8 +1,8 @@
 # Postgrex
 
-## Install dependencies
+## 依存関係のインストール
 
-Add both dependencies in your `mix.exs` file:
+`mix.exs`ファイルに両方の依存関係を追加します：
 
 ```elixir
   defp deps do
@@ -13,11 +13,9 @@ Add both dependencies in your `mix.exs` file:
   end
 ```
 
-## Start postgrex process
+## Postgrexプロセスの起動
 
-Althought it cna be [started manually](https://hexdocs.pm/postgrex/readme.html#example),
-it is a good idea to declare this process inside a supervision tree
-along with a name we can easily reference later.
+[手動で起動](https://hexdocs.pm/postgrex/readme.html#example)することもできますが、後で簡単に参照できる名前と共にスーパーバイザーツリー内でこのプロセスを宣言することをお勧めします。
 
 ```elixir
 defmodule MyApp.Application do
@@ -38,10 +36,9 @@ defmodule MyApp.Application do
 end
 ```
 
-## Declare in yesql
+## Yesqlでの宣言
 
-Then declare your yesql module by specifying you want to use postgrex
-along with the postgrex process:
+次に、PostgrexとPostgrexプロセスを使用することを指定して、Yesqlモジュールを宣言します：
 
 ```elixir
     defmodule Query do
@@ -55,6 +52,6 @@ along with the postgrex process:
     Query.now []
     # => {:ok, [%{now: ~U[2020-05-09 21:22:54.680122Z]}]}
 
-    Query.users_by_country(country_code: "gbr")
-    # => {:ok, [%{name: "Louis", country_code: "gbr"}]}
+    Query.users_by_country(country_code: "jpn")
+    # => {:ok, [%{name: "太郎", country_code: "jpn"}]}
 ```
