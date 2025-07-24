@@ -99,6 +99,32 @@ yesql will keep your SQL queries closer to canonical SQL, but if you start findi
 it limiting or convoluted maybe it would be a good time to check out more powerful
 abstractions like ayesql or Ecto.
 
+## Supported Drivers
+
+Yesql supports multiple database drivers:
+
+- **Postgrex** - PostgreSQL driver
+- **Ecto** - Use with any Ecto repo
+- **DuckDB** - Analytical database via DuckDBex
+
+### Using with DuckDB
+
+```elixir
+defmodule Analytics do
+  use Yesql, driver: :duckdb
+
+  # Open DuckDB connection
+  {:ok, db} = Duckdbex.open("analytics.duckdb")
+  {:ok, conn} = Duckdbex.connection(db)
+
+  # Define your query
+  Yesql.defquery("analytics/aggregate_sales.sql")
+  
+  # Use it
+  Analytics.aggregate_sales(conn, start_date: "2024-01-01")
+end
+```
+
 ## Development & Testing
 
 ```sh
