@@ -8,6 +8,7 @@ defmodule Yesql.Mixfile do
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: [:leex] ++ Mix.compilers(),
       deps: deps(),
       name: "Yesql",
       description: "Using plain old SQL to query databases",

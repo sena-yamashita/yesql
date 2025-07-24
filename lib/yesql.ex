@@ -23,8 +23,7 @@ defmodule Yesql do
   """
 
   alias __MODULE__.{NoDriver, UnknownDriver, MissingParam}
-
-  @supported_drivers [Postgrex, Ecto]
+  alias Yesql.{Driver, DriverFactory}
 
   defmacro __using__(opts) do
     quote bind_quoted: binding() do
@@ -34,26 +33,41 @@ defmodule Yesql do
   end
 
   defmacro defquery(file_path, opts \\ []) do
-    drivers = @supported_drivers
-
     quote bind_quoted: binding() do
       name = file_path |> Path.basename(".sql") |> String.to_atom()
-      driver = opts[:driver] || @yesql_private__driver || raise(NoDriver, name)
+      driver_name = opts[:driver] || @yesql_private__driver || raise(NoDriver, name)
       conn = opts[:conn] || @yesql_private__conn
 
-      {:ok, sql, param_spec} =
-        file_path |> File.read!() |> String.replace("\r\n", "\n") |> Yesql.parse()
-
-      unless driver in drivers, do: raise(UnknownDriver, driver)
-
-      def unquote(name)(conn, args) do
-        Yesql.exec(conn, unquote(driver), unquote(sql), unquote(param_spec), args)
+      # ドライバー名を正規化（モジュール名からアトムへ）
+      driver_atom = case driver_name do
+        Postgrex -> :postgrex
+        Ecto -> :ecto
+        atom when is_atom(atom) -> atom
+        _ -> driver_name
       end
+      
+      # ドライバーインスタンスを作成
+      case DriverFactory.create(driver_atom) do
+        {:ok, driver_instance} ->
+          # SQLファイルを読み込んでパラメータを変換
+          raw_sql = file_path |> File.read!() |> String.replace("\r\n", "\n")
+          {sql, param_spec} = Driver.convert_params(driver_instance, raw_sql, [])
 
-      if conn do
-        def unquote(name)(args) do
-          Yesql.exec(unquote(conn), unquote(driver), unquote(sql), unquote(param_spec), args)
-        end
+          def unquote(name)(conn, args) do
+            Yesql.exec(conn, unquote(Macro.escape(driver_instance)), unquote(sql), unquote(param_spec), args)
+          end
+
+          if conn do
+            def unquote(name)(args) do
+              Yesql.exec(unquote(conn), unquote(Macro.escape(driver_instance)), unquote(sql), unquote(param_spec), args)
+            end
+          end
+          
+        {:error, :unknown_driver} ->
+          raise(UnknownDriver, driver_atom)
+          
+        {:error, :driver_not_loaded} ->
+          raise(UnknownDriver, "Driver #{driver_atom} is not loaded. Make sure the required library is in your dependencies.")
       end
     end
   end
@@ -90,8 +104,8 @@ defmodule Yesql do
   def exec(conn, driver, sql, param_spec, data) do
     param_list = Enum.map(param_spec, &fetch_param(data, &1))
 
-    with {:ok, result} <- exec_for_driver(conn, driver, sql, param_list) do
-      format_result(result)
+    with {:ok, result} <- Driver.execute(driver, conn, sql, param_list) do
+      Driver.process_result(driver, {:ok, result})
     end
   end
 
@@ -105,32 +119,6 @@ defmodule Yesql do
   defp dict_fetch(dict, key) when is_map(dict), do: Map.fetch(dict, key)
   defp dict_fetch(dict, key) when is_list(dict), do: Keyword.fetch(dict, key)
 
-  is_compiled? = fn module -> match?({:module, ^module}, Code.ensure_compiled(module)) end
-
-  if is_compiled?.(Postgrex) do
-    defp exec_for_driver(conn, Postgrex, sql, param_list) do
-      Postgrex.query(conn, sql, param_list)
-    end
-  end
-
-  if is_compiled?.(Ecto) do
-    defp exec_for_driver(repo, Ecto, sql, param_list) do
-      Ecto.Adapters.SQL.query(repo, sql, param_list)
-    end
-  end
-
-  defp exec_for_driver(_, driver, _, _) do
-    raise UnknownDriver.exception(driver)
-  end
-
-  defp format_result(result) do
-    atom_columns = Enum.map(result.columns || [], &String.to_atom/1)
-
-    result =
-      Enum.map(result.rows || [], fn row ->
-        atom_columns |> Enum.zip(row) |> Enum.into(%{})
-      end)
-
-    {:ok, result}
-  end
+  # parseメソッドは後方互換性のために残しておく
+  # 新しいドライバーシステムでは直接使用しない
 end
