@@ -5,10 +5,10 @@ defmodule Yesql.Mixfile do
     [
       app: :yesql,
       version: "2.0.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:leex] ++ Mix.compilers(),
+      compilers: [:leex],
       deps: deps(),
       name: "Yesql",
       description: "Using plain old SQL to query databases",

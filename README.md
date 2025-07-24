@@ -119,6 +119,11 @@ defmodule Analytics do
 end
 ```
 
+## 要件
+
+- **Elixir**: 1.14以上
+- **Erlang/OTP**: 23以上（推奨）
+
 ## 開発とテスト
 
 ```sh

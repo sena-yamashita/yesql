@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 case Mix.env() do
   :test ->

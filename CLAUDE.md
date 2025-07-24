@@ -62,6 +62,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - タスク管理は `ToDo.md` を参照
 
 ## 今後の開発方針
+- Elixirは1.14でも動くようにしてください。
+- 追加ドライバー対応を行っていきます。
+   - MySQL/MariaDB
+   - MSSQL
+   - Oracle
 
 ### 新規ドライバー追加手順
 1. `lib/yesql/driver/` にドライバーモジュールを作成
@@ -74,6 +79,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - すべての変更にはテストを含める
 - 既存APIの後方互換性を維持
 - パフォーマンスへの影響を考慮
+- 構成が変わればNewSystemConfiguration.mdを必ず更新する
 
 ### 優先順位
 1. 高：既存機能の安定性維持
@@ -122,7 +128,7 @@ createdb yesql_test
 ### プロジェクト構成
 - **言語**: Elixir（Erlang VM上で動作）
 - **ビルドツール**: Mix
-- **最小Elixirバージョン**: 1.5以上
+- **最小Elixirバージョン**: 1.14以上
 - **テストフレームワーク**: ExUnit
 
 ### アーキテクチャ概要
