@@ -15,6 +15,7 @@ SQLファイルからElixir関数を自動生成し、型安全なデータベ�
 ### 1.3 主な変更点（v1.0.1→v2.0.0）
 - プロトコルベースのドライバーアーキテクチャを導入
 - DuckDBサポートを追加
+- MySQL/MariaDBサポートを追加
 - ドライバー固有ロジックの分離とモジュール化
 - 拡張可能な設計への移行
 
@@ -33,14 +34,17 @@ yesql/
 │       └── driver/                 # ドライバー実装
 │           ├── duckdb.ex          # DuckDBドライバー
 │           ├── ecto.ex            # Ectoドライバー
+│           ├── mysql.ex           # MySQL/MariaDBドライバー
 │           └── postgrex.ex        # Postgrexドライバー
 ├── src/
 │   └── sql_tokenizer.xrl          # Leexトークナイザー定義
 ├── test/
 │   ├── yesql_test.exs            # 既存テストスイート
 │   ├── duckdb_test.exs           # DuckDB専用テスト
+│   ├── mysql_test.exs            # MySQL専用テスト
 │   └── sql/
-│       └── duckdb/               # DuckDB用SQLファイル
+│       ├── duckdb/               # DuckDB用SQLファイル
+│       └── mysql/                # MySQL用SQLファイル
 └── mix.exs                        # プロジェクト設定（依存関係を含む）
 ```
 
@@ -131,7 +135,14 @@ end
 - 複数のデータベースバックエンドをサポート
 - Postgrexと同じパラメータ形式を使用
 
-### 3.3 DuckDBドライバー (lib/yesql/driver/duckdb.ex)
+### 3.3 MySQLドライバー (lib/yesql/driver/mysql.ex)
+**新規追加 - MySQL/MariaDBサポート**:
+- パラメータ形式: `?` (位置パラメータ)
+- 名前付きパラメータを出現順序で`?`に変換
+- MyXQLライブラリを使用
+- 結果をマップのリストとして返却
+
+### 3.4 DuckDBドライバー (lib/yesql/driver/duckdb.ex)
 **新規追加 - DuckDB分析エンジンサポート**:
 
 ```elixir
@@ -211,6 +222,13 @@ defmodule MyApp.Analytics do
   Yesql.defquery("queries/sales_report.sql")
 end
 
+# MySQLドライバーの使用
+defmodule MyApp.UserQueries do
+  use Yesql, driver: :mysql
+  
+  Yesql.defquery("queries/get_users.sql")
+end
+
 # 実行時のドライバー指定
 Yesql.defquery("queries/dynamic.sql", driver: :ecto, conn: MyApp.Repo)
 ```
@@ -229,23 +247,41 @@ MyApp.Analytics.sales_report(conn,
 # => {:ok, [%{product: "A", total: 1000.0}, ...]}
 ```
 
+### 5.3 MySQL固有の使用例
+```elixir
+# セットアップ
+{:ok, conn} = MyXQL.start_link(
+  hostname: "localhost",
+  username: "root",
+  password: "password",
+  database: "myapp_db"
+)
+
+# クエリ実行
+MyApp.UserQueries.get_users(conn,
+  status: "active",
+  created_after: ~D[2024-01-01]
+)
+# => {:ok, [%{id: 1, name: "Alice", status: "active"}, ...]}
+```
+
 ## 6. 拡張ポイント
 
 ### 6.1 新しいドライバーの追加方法
 
 1. **ドライバーモジュールの作成**:
 ```elixir
-defmodule Yesql.Driver.MySQL do
+defmodule Yesql.Driver.MSSQL do
   defstruct []
   
-  if match?({:module, _}, Code.ensure_compiled(MyXQL)) do
+  if match?({:module, _}, Code.ensure_compiled(Tds)) do
     defimpl Yesql.Driver, for: __MODULE__ do
       def execute(_driver, conn, sql, params) do
-        # MySQL固有の実行ロジック
+        # MSSQL固有の実行ロジック
       end
       
       def convert_params(_driver, sql, _param_spec) do
-        # :name → ? への変換
+        # :name → @p1, @p2... への変換
       end
       
       def process_result(_driver, raw_result) do
@@ -259,9 +295,9 @@ end
 2. **DriverFactoryへの追加**:
 ```elixir
 # driver_factory.ex に追加
-:mysql ->
-  if match?({:module, _}, Code.ensure_compiled(MyXQL)) do
-    {:ok, %Yesql.Driver.MySQL{}}
+:mssql ->
+  if match?({:module, _}, Code.ensure_compiled(Tds)) do
+    {:ok, %Yesql.Driver.MSSQL{}}
   else
     {:error, :driver_not_loaded}
   end
@@ -269,7 +305,7 @@ end
 
 3. **依存関係の追加** (mix.exs):
 ```elixir
-{:myxql, "~> 0.6", optional: true}
+{:tds, "~> 2.3", optional: true}
 ```
 
 ### 6.2 パラメータ形式のカスタマイズ
@@ -316,7 +352,7 @@ end
 ## 9. 今後の拡張計画
 
 ### 9.1 短期計画
-- [ ] MySQL/MariaDBドライバーの実装
+- [x] MySQL/MariaDBドライバーの実装（完了）
 - [ ] SQLiteドライバーの実装
 - [ ] バッチクエリのサポート
 - [ ] トランザクション管理の改善

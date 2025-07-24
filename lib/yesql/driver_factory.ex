@@ -37,6 +37,13 @@ defmodule Yesql.DriverFactory do
           {:error, :driver_not_loaded}
         end
         
+      :mysql ->
+        if match?({:module, _}, Code.ensure_compiled(MyXQL)) do
+          {:ok, %Yesql.Driver.MySQL{}}
+        else
+          {:error, :driver_not_loaded}
+        end
+        
       _ ->
         {:error, :unknown_driver}
     end
@@ -51,6 +58,7 @@ defmodule Yesql.DriverFactory do
     drivers = if match?({:module, _}, Code.ensure_compiled(Postgrex)), do: [:postgrex | drivers], else: drivers
     drivers = if match?({:module, _}, Code.ensure_compiled(Ecto)), do: [:ecto | drivers], else: drivers
     drivers = if match?({:module, _}, Code.ensure_compiled(Duckdbex)), do: [:duckdb | drivers], else: drivers
+    drivers = if match?({:module, _}, Code.ensure_compiled(MyXQL)), do: [:mysql | drivers], else: drivers
     
     drivers
   end

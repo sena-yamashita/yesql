@@ -100,6 +100,7 @@ Yesqlは複数のデータベースドライバーをサポートしています
 - **Postgrex** - PostgreSQLドライバー
 - **Ecto** - 任意のEctoリポジトリで使用
 - **DuckDB** - DuckDBex経由の分析データベース
+- **MySQL/MariaDB** - MyXQL経由のMySQLおよびMariaDB
 
 ### DuckDBでの使用
 
@@ -116,6 +117,28 @@ defmodule Analytics do
   
   # 使用する
   Analytics.aggregate_sales(conn, start_date: "2024-01-01")
+end
+```
+
+### MySQL/MariaDBでの使用
+
+```elixir
+defmodule MyApp.Queries do
+  use Yesql, driver: :mysql
+  
+  # MySQL接続を開く
+  {:ok, conn} = MyXQL.start_link(
+    hostname: "localhost",
+    username: "root",
+    password: "password",
+    database: "myapp_db"
+  )
+  
+  # クエリを定義
+  Yesql.defquery("queries/get_users.sql")
+  
+  # 使用する（MySQLは?形式のパラメータを使用）
+  MyApp.Queries.get_users(conn, status: "active", limit: 10)
 end
 ```
 

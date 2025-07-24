@@ -10,22 +10,27 @@
 ### 追加
 - マルチドライバー対応のためのドライバー抽象化レイヤー（`Yesql.Driver`プロトコル）
 - DuckDBドライバーサポート（`Yesql.Driver.DuckDB`）
+- MySQL/MariaDBドライバーサポート（`Yesql.Driver.MySQL`）
 - ドライバーファクトリー（`Yesql.DriverFactory`）による動的ドライバー作成
 - DuckDB用テストスイート
+- MySQL用テストスイート
 - マルチドライバー対応のドキュメント（`guides/multi_driver_configuration.md`）
+- MySQLドライバー設定ガイド（`guides/mysql_configuration.md`）
 - 日本語ドキュメント（README.md、全てのガイド）
 - プロジェクト管理ドキュメント（CLAUDE.md、SystemConfiguration.md、ToDo.md）
 
 ### 変更
+- 最小Elixirバージョンを1.14に更新
 - ドライバーサポートをハードコードから動的な仕組みに変更
 - 既存のPostgrex/Ecto実装をプロトコル実装に移行
-- `mix.exs`にleexコンパイラを追加
-- テストヘルパーを拡張してDuckDBサポートを追加
+- `mix.exs`にleexコンパイラを追加（Mix.compilers()の使用を削除）
+- テストヘルパーを拡張してDuckDB/MySQLサポートを追加
+- config.exsでMix.ConfigからConfigモジュールに移行
 
 ### 技術的詳細
 - **破壊的変更なし**: 既存のAPIは完全に互換性を維持
-- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`のシンボル形式もサポート
-- **依存関係**: DuckDBexを`optional: true`として追加
+- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`、`:mysql`のシンボル形式もサポート
+- **依存関係**: DuckDBexとMyXQLを`optional: true`として追加
 
 ### 開発
 - Claude Code (Anthropic)を使用したAIペアプログラミングによる実装

@@ -62,6 +62,8 @@ defmodule Yesql.Mixfile do
       {:ecto, "~> 3.4", optional: true},
       # DuckDB driver
       {:duckdbex, "~> 0.3.9", optional: true},
+      # MySQL/MariaDB driver
+      {:myxql, "~> 0.6", optional: true},
 
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},
