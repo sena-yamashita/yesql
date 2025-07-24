@@ -60,6 +60,8 @@ defmodule Yesql.Mixfile do
       # Database abstraction
       {:ecto_sql, "~> 3.4", optional: true},
       {:ecto, "~> 3.4", optional: true},
+      # DuckDB driver
+      {:duckdbex, "~> 0.3.9", optional: true},
 
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},

@@ -30,13 +30,12 @@ defmodule Yesql.DriverFactory do
           {:error, :driver_not_loaded}
         end
         
-      # 将来的にDuckDBを追加
-      # :duckdb ->
-      #   if Code.ensure_compiled?(Duckdbex) do
-      #     {:ok, %Yesql.Driver.DuckDB{}}
-      #   else
-      #     {:error, :driver_not_loaded}
-      #   end
+      :duckdb ->
+        if match?({:module, _}, Code.ensure_compiled(Duckdbex)) do
+          {:ok, %Yesql.Driver.DuckDB{}}
+        else
+          {:error, :driver_not_loaded}
+        end
         
       _ ->
         {:error, :unknown_driver}
@@ -51,7 +50,7 @@ defmodule Yesql.DriverFactory do
     
     drivers = if match?({:module, _}, Code.ensure_compiled(Postgrex)), do: [:postgrex | drivers], else: drivers
     drivers = if match?({:module, _}, Code.ensure_compiled(Ecto)), do: [:ecto | drivers], else: drivers
-    # drivers = if Code.ensure_compiled?(Duckdbex), do: [:duckdb | drivers], else: drivers
+    drivers = if match?({:module, _}, Code.ensure_compiled(Duckdbex)), do: [:duckdb | drivers], else: drivers
     
     drivers
   end
