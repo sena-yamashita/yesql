@@ -1,0 +1,196 @@
+name: Database Tests
+
+on:
+  push:
+    branches: [ "master", "main", "dev" ]
+  pull_request:
+    branches: [ "master", "main", "dev" ]
+
+env:
+  MIX_ENV: test
+
+jobs:
+  postgresql:
+    name: PostgreSQL Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: yesql_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.8'
+        otp-version: '25.3'
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Run PostgreSQL tests
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DATABASE: yesql_test
+      run: mix test test/postgrex_test.exs test/postgrex_streaming_test.exs
+
+  mysql:
+    name: MySQL Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: yesql_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.8'
+        otp-version: '25.3'
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Run MySQL tests
+      env:
+        MYSQL_HOST: localhost
+        MYSQL_PORT: 3306
+        MYSQL_USER: root
+        MYSQL_PASSWORD: root
+        MYSQL_DATABASE: yesql_test
+        MYSQL_TEST: true
+      run: mix test test/mysql_test.exs test/mysql_streaming_test.exs
+
+  sqlite:
+    name: SQLite Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.8'
+        otp-version: '25.3'
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Run SQLite tests
+      env:
+        SQLITE_TEST: true
+      run: mix test test/sqlite_test.exs test/sqlite_streaming_test.exs
+
+  duckdb:
+    name: DuckDB Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.8'
+        otp-version: '25.3'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+    
+    - name: Install dependencies
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get
+    
+    - name: Compile DuckDBex NIF
+      run: |
+        mix deps.compile duckdbex --force
+    
+    - name: Run DuckDB tests
+      env:
+        DUCKDB_TEST: true
+      run: |
+        mix test test/duckdb_test.exs test/duckdb_streaming_test.exs test/duckdb_parameter_test.exs test/duckdb_multi_statement_test.exs
+
+  mssql:
+    name: MSSQL Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: YourStrong@Passw0rd
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 10s
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15.8'
+        otp-version: '25.3'
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Wait for MSSQL
+      run: |
+        for i in {1..30}; do
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' && break
+          echo "Waiting for MSSQL to be ready..."
+          sleep 2
+        done
+    
+    - name: Run MSSQL tests
+      env:
+        MSSQL_HOST: localhost
+        MSSQL_PORT: 1433
+        MSSQL_USER: sa
+        MSSQL_PASSWORD: YourStrong@Passw0rd
+        MSSQL_DATABASE: master
+        MSSQL_TEST: true
+      run: mix test test/mssql_test.exs test/mssql_streaming_test.exs

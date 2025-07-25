@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  MIX_ENV: test
+
+jobs:
+  test:
+    name: Test on OTP ${{ matrix.otp }} / Elixir ${{ matrix.elixir }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        elixir: ['1.14', '1.15', '1.16']
+        otp: ['25', '26']
+        exclude:
+          - elixir: '1.14'
+            otp: '26'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: yesql_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: yesql_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ matrix.elixir }}
+        otp-version: ${{ matrix.otp }}
+    
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Run tests (PostgreSQL and core)
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DATABASE: yesql_test
+      run: mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
+    
+    - name: Run MySQL tests
+      env:
+        MYSQL_HOST: localhost
+        MYSQL_PORT: 3306
+        MYSQL_USER: root
+        MYSQL_PASSWORD: root
+        MYSQL_DATABASE: yesql_test
+        MYSQL_TEST: true
+      run: mix test --only mysql
+    
+    - name: Run SQLite tests
+      env:
+        SQLITE_TEST: true
+      run: mix test --only sqlite
+    
+    - name: Run MSSQL tests
+      env:
+        MSSQL_HOST: localhost
+        MSSQL_PORT: 1433
+        MSSQL_USER: sa
+        MSSQL_PASSWORD: YourStrong@Passw0rd
+        MSSQL_DATABASE: master
+        MSSQL_TEST: true
+      run: mix test --only mssql
+
+  duckdb-test:
+    name: DuckDB Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        elixir: ['1.15']
+        otp: ['25']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ matrix.elixir }}
+        otp-version: ${{ matrix.otp }}
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+    
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-duckdb-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-duckdb-
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Compile DuckDBex
+      run: mix deps.compile duckdbex
+    
+    - name: Run DuckDB tests
+      env:
+        DUCKDB_TEST: true
+      run: mix test --only duckdb
+
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15'
+        otp-version: '25'
+    
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Check formatting
+      run: mix format --check-formatted
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.15'
+        otp-version: '25'
+    
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    
+    - name: Restore PLT cache
+      uses: actions/cache@v3
+      with:
+        path: priv/plts
+        key: ${{ runner.os }}-plt-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-plt-
+    
+    - name: Install dependencies
+      run: mix deps.get
+    
+    - name: Create PLTs
+      run: |
+        mkdir -p priv/plts
+        mix dialyzer --plt
+    
+    - name: Run dialyzer
+      run: mix dialyzer --no-check
