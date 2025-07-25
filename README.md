@@ -434,11 +434,74 @@ end, driver: :postgrex)
 - **Elixir**: 1.14以上
 - **Erlang/OTP**: 23以上（推奨）
 
-## 開発とテスト
+## インストール
+
+### Hexパッケージとして（準備中）
+
+```elixir
+def deps do
+  [
+    {:yesql, "~> 2.1.0"}
+  ]
+end
+```
+
+### GitHubリポジトリから
+
+```elixir
+def deps do
+  [
+    {:yesql, git: "https://github.com/sena-yamashita/yesql.git", tag: "v2.1.0"},
+    # 使用するドライバーも追加（必要なもののみ）
+    {:postgrex, "~> 0.15", optional: true},
+    {:myxql, "~> 0.6", optional: true},
+    {:duckdbex, "~> 0.3.9", optional: true},
+    # 他のドライバーも必要に応じて追加
+  ]
+end
+```
+
+その後、以下を実行：
+
+```bash
+mix deps.get
+mix compile
+```
+
+## 開発環境のセットアップ
+
+### リポジトリのクローンとビルド
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/sena-yamashita/yesql.git
+cd yesql
+
+# 依存関係の取得
+mix deps.get
+
+# LEEXファイルのコンパイル（開発時のみ必要）
+# 注：生成された.erlファイルはリポジトリに含まれているため、通常は不要
+erl -noshell -eval 'leex:file("src/Elixir.Yesql.Tokenizer.xrl"), halt().'
+
+# コンパイル
+mix compile
+```
+
+### 注意事項
+
+- LEEXトークナイザー（`.xrl`ファイル）から生成される`.erl`ファイルは、依存プロジェクトでのコンパイルを簡単にするためにリポジトリに含まれています
+- 開発時にトークナイザーを変更した場合は、上記のコマンドで再生成してください
+
+## テスト
+
+### 基本的なテスト実行
 
 ```sh
+# PostgreSQL用のテストデータベースを作成
 createdb yesql_test
-mix deps.get
+
+# テスト実行
 mix test
 ```
 
