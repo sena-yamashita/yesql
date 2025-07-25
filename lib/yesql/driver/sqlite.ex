@@ -15,11 +15,15 @@ defmodule Yesql.Driver.SQLite do
       SQLiteでクエリを実行する
       """
       def execute(_driver, conn, sql, params) do
-        case Exqlite.query(conn, sql, params) do
-          {:ok, result} ->
-            process_result(_driver, {:ok, result})
-          {:error, _} = error ->
-            error
+        if Code.ensure_loaded?(Exqlite) do
+          case Exqlite.query(conn, sql, params) do
+            {:ok, result} ->
+              process_result(_driver, {:ok, result})
+            {:error, _} = error ->
+              error
+          end
+        else
+          {:error, "Exqlite is not available. Please add :exqlite to your dependencies."}
         end
       end
       
@@ -95,30 +99,34 @@ defmodule Yesql.Driver.SQLite do
       {:ok, conn} = SQLite.open("myapp.db", mode: :readonly)
   """
   def open(database \\ ":memory:", opts \\ []) do
-    config = [
-      database: database,
-      timeout: opts[:timeout] || 5000,
-      busy_timeout: opts[:busy_timeout] || 2000
-    ]
-    
-    case Exqlite.Sqlite3.open(database) do
-      {:ok, db} ->
-        conn = %{db: db, config: config}
-        
-        # 基本的な設定
-        if cache_size = opts[:cache_size] do
-          Exqlite.query!(conn, "PRAGMA cache_size = #{cache_size}")
-        end
-        
-        # WALモードを有効化（ファイルベースの場合）
-        if database != ":memory:" && opts[:mode] != :readonly do
-          Exqlite.query!(conn, "PRAGMA journal_mode = WAL")
-        end
-        
-        {:ok, conn}
-        
-      error ->
-        error
+    unless Code.ensure_loaded?(Exqlite) do
+      {:error, "Exqlite is not available. Please add :exqlite to your dependencies."}
+    else
+      config = [
+        database: database,
+        timeout: opts[:timeout] || 5000,
+        busy_timeout: opts[:busy_timeout] || 2000
+      ]
+      
+      case Exqlite.Sqlite3.open(database) do
+        {:ok, db} ->
+          conn = %{db: db, config: config}
+          
+          # 基本的な設定
+          if cache_size = opts[:cache_size] do
+            Exqlite.query!(conn, "PRAGMA cache_size = #{cache_size}")
+          end
+          
+          # WALモードを有効化（ファイルベースの場合）
+          if database != ":memory:" && opts[:mode] != :readonly do
+            Exqlite.query!(conn, "PRAGMA journal_mode = WAL")
+          end
+          
+          {:ok, conn}
+          
+        error ->
+          error
+      end
     end
   end
   
@@ -126,12 +134,16 @@ defmodule Yesql.Driver.SQLite do
   SQLiteのバージョン情報を取得
   """
   def version(conn) do
-    case Exqlite.query(conn, "SELECT sqlite_version()") do
-      {:ok, result} ->
-        [[version]] = result.rows
-        {:ok, version}
-      error ->
-        error
+    unless Code.ensure_loaded?(Exqlite) do
+      {:error, "Exqlite is not available. Please add :exqlite to your dependencies."}
+    else
+      case Exqlite.query(conn, "SELECT sqlite_version()") do
+        {:ok, result} ->
+          [[version]] = result.rows
+          {:ok, version}
+        error ->
+          error
+      end
     end
   end
 end

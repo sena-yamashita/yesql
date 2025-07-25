@@ -59,10 +59,10 @@ defmodule Yesql.Mixfile do
   defp deps do
     [
       # Postgresql driver
-      {:postgrex, "~> 0.15", optional: true},
+      {:postgrex, ">= 0.15.0", optional: true},
       # Database abstraction
-      {:ecto_sql, "~> 3.4", optional: true},
-      {:ecto, "~> 3.4", optional: true},
+      {:ecto_sql, ">= 3.4.0", optional: true},
+      {:ecto, ">= 3.4.0", optional: true},
       # DuckDB driver
       {:duckdbex, "~> 0.3.9", optional: true},
       # MySQL/MariaDB driver
