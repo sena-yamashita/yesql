@@ -282,47 +282,6 @@ defmodule Yesql.Transaction do
     Exqlite.query(conn, "SAVEPOINT #{name}", [])
   end
   
-  defp rollback_to_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
-    Postgrex.query(conn, "ROLLBACK TO SAVEPOINT #{name}", [])
-  end
-  
-  defp rollback_to_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
-    MyXQL.query(conn, "ROLLBACK TO SAVEPOINT #{name}", [])
-  end
-  
-  defp rollback_to_savepoint(%Yesql.Driver.MSSQL{}, conn, name) do
-    Tds.query(conn, "ROLLBACK TRANSACTION #{name}", [])
-  end
-  
-  defp rollback_to_savepoint(%Yesql.Driver.Oracle{}, conn, name) do
-    Jamdb.Oracle.query(conn, "ROLLBACK TO #{name}", [])
-  end
-  
-  defp rollback_to_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
-    Exqlite.query(conn, "ROLLBACK TO #{name}", [])
-  end
-  
-  defp release_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
-    Postgrex.query(conn, "RELEASE SAVEPOINT #{name}", [])
-  end
-  
-  defp release_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
-    MyXQL.query(conn, "RELEASE SAVEPOINT #{name}", [])
-  end
-  
-  defp release_savepoint(%Yesql.Driver.MSSQL{}, _conn, _name) do
-    # MSSQLはセーブポイントの明示的な解放をサポートしない
-    {:ok, :not_supported}
-  end
-  
-  defp release_savepoint(%Yesql.Driver.Oracle{}, _conn, _name) do
-    # Oracleもセーブポイントの明示的な解放をサポートしない
-    {:ok, :not_supported}
-  end
-  
-  defp release_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
-    Exqlite.query(conn, "RELEASE #{name}", [])
-  end
   
   # トランザクション状態確認
   

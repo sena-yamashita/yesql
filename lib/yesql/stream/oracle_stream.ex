@@ -179,7 +179,7 @@ defmodule Yesql.Stream.OracleStream do
   @doc """
   分析関数を使用したウィンドウストリーミング
   """
-  def create_windowed_stream(conn, sql, window_column, window_size, opts \\ []) do
+  def create_windowed_stream(conn, sql, params, window_column, window_size, opts \\ []) do
     chunk_size = Keyword.get(opts, :chunk_size, @default_chunk_size)
     overlap = Keyword.get(opts, :overlap, 0)
     

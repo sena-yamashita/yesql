@@ -47,15 +47,12 @@ defmodule Yesql.Mixfile do
   end
 
   def application do
-    case Mix.env() do
-      :test ->
-        [
-          mod: {YesqlTest.Application, []},
-          extra_applications: [:logger, :runtime_tools]
-        ]
-
-      _ ->
-        [extra_applications: []]
+    [
+      extra_applications: [:logger]
+    ] ++ if Mix.env() == :test do
+      [mod: {YesqlTest.Application, []}]
+    else
+      []
     end
   end
 
