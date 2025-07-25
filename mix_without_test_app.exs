@@ -4,7 +4,7 @@ defmodule Yesql.Mixfile do
   def project do
     [
       app: :yesql,
-      version: "2.1.1",
+      version: "2.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -46,6 +46,7 @@ defmodule Yesql.Mixfile do
     ]
   end
 
+  # テスト環境でも通常のアプリケーション設定を使用
   def application do
     [
       extra_applications: [:logger]
