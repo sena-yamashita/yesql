@@ -18,7 +18,7 @@ defmodule Yesql.Mixfile do
         maintainers: ["Louis Pilfold"],
         licenses: ["Apache 2.0"],
         links: %{"GitHub" => "https://github.com/lpil/yesql"},
-        files: ~w(LICENCE README.md lib src mix.exs guides analysis)
+        files: ~w(LICENCE README.md lib src mix.exs)
       ]
     ]
   end
