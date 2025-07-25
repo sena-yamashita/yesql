@@ -23,7 +23,8 @@
       "WebFetch(domain:hex.pm)",
       "Bash(chmod:*)",
       "Bash(rm:*)",
-      "Bash(mix clean:*)"
+      "Bash(mix clean:*)",
+      "Bash(mix run:*)"
     ],
     "deny": []
   }
