@@ -194,10 +194,17 @@ defmodule Yesql.Driver.DuckDB do
       
       # 結果を取得してフォーマット
       defp fetch_and_format_results(result_ref) do
+        # カラム名を取得
+        columns = case Duckdbex.columns(result_ref) do
+          cols when is_list(cols) -> cols
+          _ -> []
+        end
+        
         # Duckdbex.fetch_allは直接行を返す（{:ok, rows}ではない）
         rows = Duckdbex.fetch_all(result_ref)
+        
         # DuckDBexの結果形式をPostgrex風の形式に変換
-        {:ok, %{rows: rows, columns: extract_columns(rows)}}
+        {:ok, %{rows: rows, columns: columns}}
       rescue
         e ->
           {:error, Exception.message(e)}
@@ -234,11 +241,16 @@ defmodule Yesql.Driver.DuckDB do
                   
                 _ ->
                   # 通常のリストの場合、カラム名とマッピング
-                  atom_columns = Enum.map(columns || [], &to_atom_key/1)
-                  formatted_rows = Enum.map(rows, fn row ->
-                    atom_columns |> Enum.zip(row) |> Enum.into(%{})
-                  end)
-                  {:ok, formatted_rows}
+                  if columns && length(columns) > 0 do
+                    atom_columns = Enum.map(columns, &to_atom_key/1)
+                    formatted_rows = Enum.map(rows, fn row ->
+                      atom_columns |> Enum.zip(row) |> Enum.into(%{})
+                    end)
+                    {:ok, formatted_rows}
+                  else
+                    # カラム情報がない場合はそのまま返す
+                    {:ok, rows}
+                  end
               end
             end
             
@@ -267,17 +279,6 @@ defmodule Yesql.Driver.DuckDB do
         {i, [sql, fragment], params}
       end
       
-      # カラム名からカラム情報を抽出
-      defp extract_columns([]), do: []
-      defp extract_columns([row | _]) when is_list(row) and is_tuple(hd(row)) do
-        # キーワードリストからカラム名を抽出
-        Enum.map(row, fn {key, _} -> Atom.to_string(key) end)
-      end
-      defp extract_columns(_) do
-        # DuckDBexは列名を返さないため、デフォルト値を返す
-        # 実際の実装では、別途クエリで列情報を取得する必要がある
-        []
-      end
       
       # 文字列またはアトムをアトムに変換
       defp to_atom_key(key) when is_atom(key), do: key
