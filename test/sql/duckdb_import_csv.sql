@@ -1,0 +1,1 @@
+CREATE OR REPLACE TABLE imported_data AS SELECT * FROM read_csv_auto(:file_path)

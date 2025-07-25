@@ -187,14 +187,49 @@ end
    - ドライバー設定のconfigファイル化
    - 実行時の動的切り替え
 
-## 8. 参考情報
+## 8. DuckDBドライバーの現状と制限事項
 
-### 8.1 関連プロジェクト
+### 8.1 実装状況
+- **基本的なクエリ実行**: 動作可能
+- **パラメータなしのクエリ**: 正常に動作
+- **パラメータ付きクエリ**: 現在未サポート
+
+### 8.2 技術的課題
+
+#### 8.2.1 DuckDBexのパラメータ処理
+- DuckDBexの`query/3`関数および`prepare_statement`/`execute_statement`の両方でパラメータが正しくバインドされない
+- エラー: "Invalid Input Error: Values were not provided for the following prepared statement parameters"
+- $1形式、?形式の両方で同じエラーが発生
+
+#### 8.2.2 調査結果
+- DuckDB自体は$1形式と?形式のパラメータをサポート
+- DuckDBexのNIF実装におけるパラメータバインディングに問題がある可能性
+- 他のDuckDBバインディング（Node.js、.NET等）でも類似の問題が報告されている
+
+### 8.3 今後の対応方針
+1. **短期的対応**
+   - パラメータクエリのサポートを保留
+   - ドキュメントに制限事項を明記
+   - パラメータなしクエリのみの使用を推奨
+
+2. **中長期的対応**
+   - DuckDBexのアップデートを監視
+   - 代替のDuckDBバインディングの評価
+   - パラメータ変換方式の再設計
+
+## 9. 参考情報
+
+### 9.1 関連プロジェクト
 - https://github.com/tschnibo/yesql/tree/dev（開発ブランチ）
 - https://github.com/AlexR2D2/duckdbex（DuckDBドライバー）
 
-### 8.2 技術スタック
+### 9.2 技術スタック
 - Erlang/OTP
 - Leex（Erlang Lexical Analyzer）
 - Mix（ビルドツール）
 - ExUnit（テストフレームワーク）
+
+### 9.3 ドライバー依存関係
+- Postgrex: PostgreSQLドライバー（動作確認済）
+- Ecto: Elixir ORM（動作確認済）
+- Duckdbex: DuckDBドライバー（パラメータクエリに制限あり）
