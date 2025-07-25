@@ -103,6 +103,7 @@ Yesqlは複数のデータベースドライバーをサポートしています
 - **MySQL/MariaDB** - MyXQL経由のMySQLおよびMariaDB
 - **MSSQL** - Tds経由のMicrosoft SQL Server
 - **Oracle** - jamdb_oracle経由のOracle Database
+- **SQLite** - Exqlite経由のSQLite（v2.0で追加）
 
 ### DuckDBでの使用
 
@@ -306,6 +307,85 @@ defmodule MyApp.Queries do
   # 使用する（Oracleは:1, :2...形式のパラメータを使用）
   MyApp.Queries.analytics_summary(conn, start_date: ~D[2024-01-01], end_date: ~D[2024-12-31])
 end
+```
+
+### SQLiteでの使用
+
+```elixir
+defmodule MyApp.Queries do
+  use Yesql, driver: :sqlite
+  
+  # SQLite接続を開く（ファイルベース）
+  {:ok, conn} = Exqlite.Sqlite3.open("myapp.db")
+  
+  # メモリデータベースでの使用
+  {:ok, mem_conn} = Exqlite.Sqlite3.open(":memory:")
+  
+  # クエリを定義
+  Yesql.defquery("queries/local_data.sql")
+  
+  # 使用する（SQLiteは?形式のパラメータを使用）
+  MyApp.Queries.search_local_data(conn, category: "electronics", min_price: 100)
+end
+```
+
+## 新機能（v2.0）
+
+### バッチクエリ実行
+
+複数のクエリを効率的に実行：
+
+```elixir
+alias Yesql.Batch
+
+# 複数クエリの一括実行
+queries = [
+  {"INSERT INTO users (name, age) VALUES ($1, $2)", ["Alice", 25]},
+  {"INSERT INTO users (name, age) VALUES ($1, $2)", ["Bob", 30]},
+  {"UPDATE stats SET user_count = user_count + 2", []}
+]
+
+{:ok, results} = Batch.execute(queries, 
+  driver: :postgrex,
+  conn: conn,
+  transaction: true
+)
+
+# 名前付きクエリ
+named_queries = %{
+  create_user: {"INSERT INTO users (name) VALUES ($1) RETURNING id", ["Charlie"]},
+  create_profile: {"INSERT INTO profiles (user_id, bio) VALUES ($1, $2)", [1, "Bio"]}
+}
+
+{:ok, results} = Batch.execute_named(named_queries, driver: :postgrex, conn: conn)
+user_id = results.create_user |> hd() |> Map.get(:id)
+```
+
+### 改善されたトランザクション管理
+
+```elixir
+alias Yesql.Transaction
+
+# 分離レベルを指定
+{:ok, result} = Transaction.transaction(conn, fn conn ->
+  # トランザクション内での操作
+  MyApp.Queries.transfer_funds(conn, from: 1, to: 2, amount: 100)
+end, driver: :postgrex, isolation_level: :serializable)
+
+# セーブポイントの使用
+Transaction.transaction(conn, fn conn ->
+  MyApp.Queries.insert_order(conn, order_data)
+  
+  Transaction.savepoint(conn, "items", driver: :postgrex)
+  
+  case MyApp.Queries.insert_order_items(conn, items) do
+    {:error, _} ->
+      Transaction.rollback_to_savepoint(conn, "items", driver: :postgrex)
+      {:ok, :partial_success}
+    {:ok, _} ->
+      {:ok, :full_success}
+  end
+end, driver: :postgrex)
 ```
 
 ## 要件

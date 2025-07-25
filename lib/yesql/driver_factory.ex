@@ -58,6 +58,13 @@ defmodule Yesql.DriverFactory do
           {:error, :driver_not_loaded}
         end
         
+      :sqlite ->
+        if match?({:module, _}, Code.ensure_compiled(Exqlite)) do
+          {:ok, %Yesql.Driver.SQLite{}}
+        else
+          {:error, :driver_not_loaded}
+        end
+        
       _ ->
         {:error, :unknown_driver}
     end
@@ -75,6 +82,7 @@ defmodule Yesql.DriverFactory do
     drivers = if match?({:module, _}, Code.ensure_compiled(MyXQL)), do: [:mysql | drivers], else: drivers
     drivers = if match?({:module, _}, Code.ensure_compiled(Tds)), do: [:mssql | drivers], else: drivers
     drivers = if match?({:module, _}, Code.ensure_compiled(Jamdb.Oracle)), do: [:oracle | drivers], else: drivers
+    drivers = if match?({:module, _}, Code.ensure_compiled(Exqlite)), do: [:sqlite | drivers], else: drivers
     
     drivers
   end

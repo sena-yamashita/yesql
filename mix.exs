@@ -35,6 +35,8 @@ defmodule Yesql.Mixfile do
         "guides/mysql_configuration.md",
         "guides/mssql_configuration.md",
         "guides/oracle_configuration.md",
+        "guides/sqlite_configuration.md",
+        "guides/migration_guide.md",
         "guides/production_checklist.md"
       ],
       groups_for_extras: [
@@ -74,6 +76,8 @@ defmodule Yesql.Mixfile do
       {:tds, "~> 2.3", optional: true},
       # Oracle driver
       {:jamdb_oracle, "~> 0.5", optional: true},
+      # SQLite driver
+      {:exqlite, "~> 0.13", optional: true},
 
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},

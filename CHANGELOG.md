@@ -5,7 +5,7 @@
 フォーマットは[Keep a Changelog](https://keepachangelog.com/ja/1.0.0/)に基づいており、
 このプロジェクトは[セマンティック バージョニング](https://semver.org/lang/ja/)に準拠しています。
 
-## [2.0.0] - 2024-07-24
+## [2.0.0] - 2025-07-24
 
 ### 追加
 - マルチドライバー対応のためのドライバー抽象化レイヤー（`Yesql.Driver`プロトコル）
@@ -13,15 +13,15 @@
 - MySQL/MariaDBドライバーサポート（`Yesql.Driver.MySQL`）
 - MSSQLドライバーサポート（`Yesql.Driver.MSSQL`）
 - Oracleドライバーサポート（`Yesql.Driver.Oracle`）
+- SQLiteドライバーサポート（`Yesql.Driver.SQLite`） - メモリDBもサポート
+- バッチクエリ実行機能（`Yesql.Batch`）
+- 改善されたトランザクション管理（`Yesql.Transaction`） - 分離レベル、セーブポイントのサポート
 - ドライバーファクトリー（`Yesql.DriverFactory`）による動的ドライバー作成
-- DuckDB用テストスイート
-- MySQL用テストスイート
-- MSSQL用テストスイート
-- Oracle用テストスイート
-- マルチドライバー対応のドキュメント（`guides/multi_driver_configuration.md`）
-- MySQLドライバー設定ガイド（`guides/mysql_configuration.md`）
-- MSSQLドライバー設定ガイド（`guides/mssql_configuration.md`）
-- Oracleドライバー設定ガイド（`guides/oracle_configuration.md`）
+- 各ドライバー用テストスイート
+- パフォーマンスベンチマーク（`bench/`ディレクトリ）
+- 各ドライバー設定ガイド（`guides/`ディレクトリ）
+- v1.xからv2.0への移行ガイド（`guides/migration_guide.md`）
+- 本番環境チェックリスト（`guides/production_checklist.md`）
 - 日本語ドキュメント（README.md、全てのガイド）
 - プロジェクト管理ドキュメント（CLAUDE.md、SystemConfiguration.md、ToDo.md、NewSystemConfiguration.md）
 
@@ -35,8 +35,9 @@
 
 ### 技術的詳細
 - **破壊的変更なし**: 既存のAPIは完全に互換性を維持
-- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`、`:mysql`、`:mssql`、`:oracle`のシンボル形式もサポート
-- **依存関係**: DuckDBex、MyXQL、Tds、jamdb_oracleを`optional: true`として追加
+- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`、`:mysql`、`:mssql`、`:oracle`、`:sqlite`のシンボル形式もサポート
+- **依存関係**: DuckDBex、MyXQL、Tds、jamdb_oracle、Exqliteを`optional: true`として追加
+- **パフォーマンス**: 抽象化レイヤーのオーバーヘッドは約5-10μs
 
 ### 開発
 - Claude Code (Anthropic)を使用したAIペアプログラミングによる実装
