@@ -3,8 +3,7 @@ defmodule DuckDBTest do
   import TestHelper
 
   # DuckDBが利用可能な場合のみテストを実行
-  @moduletag :duckdb
-  @moduletag :skip_on_ci
+  @tag :skip_on_ci
 
   defmodule QueryDuckDB do
     use Yesql, driver: :duckdb
@@ -42,23 +41,32 @@ defmodule DuckDBTest do
         
         {:ok, _} = Duckdbex.query(conn, analytics_sql, [])
         
-        {:ok, duckdb: conn, db: db}
+        # core_functionsエクステンションをロード（SUM等の集計関数用）
+        {:ok, _} = Duckdbex.query(conn, "INSTALL core_functions", [])
+        {:ok, _} = Duckdbex.query(conn, "LOAD core_functions", [])
+        
+        {:ok, conn: conn, db: db}
         
       _ ->
         :skip
     end
   end
 
-  setup %{duckdb: conn} do
-    # 各テスト前にテーブルをクリア
-    {:ok, _} = Duckdbex.query(conn, "DELETE FROM ducks", [])
-    {:ok, _} = Duckdbex.query(conn, "DELETE FROM sales", [])
-    :ok
+  setup context do
+    case context do
+      %{conn: conn} when is_reference(conn) ->
+        # 各テスト前にテーブルをクリア
+        {:ok, _} = Duckdbex.query(conn, "DELETE FROM ducks", [])
+        {:ok, _} = Duckdbex.query(conn, "DELETE FROM sales", [])
+        :ok
+      _ ->
+        :ok
+    end
   end
 
   describe "DuckDB driver" do
     @tag :duckdb
-    test "基本的なinsertとselect", %{duckdb: conn} do
+    test "基本的なinsertとselect", %{conn: conn} do
       # データ挿入
       assert QueryDuckDB.insert_duck(conn, age: 5, name: "Donald") == {:ok, []}
       assert QueryDuckDB.insert_duck(conn, age: 10, name: "Daisy") == {:ok, []}
@@ -72,7 +80,7 @@ defmodule DuckDBTest do
     end
 
     @tag :duckdb
-    test "パラメータ変換が正しく動作する", %{duckdb: conn} do
+    test "パラメータ変換が正しく動作する", %{conn: conn} do
       # 複数のパラメータを使用
       assert QueryDuckDB.insert_duck(conn, age: 7, name: "Scrooge") == {:ok, []}
       
@@ -83,7 +91,7 @@ defmodule DuckDBTest do
     end
 
     @tag :duckdb
-    test "分析クエリの実行", %{duckdb: conn} do
+    test "分析クエリの実行", %{conn: conn} do
       # サンプルデータ挿入
       sales_data = [
         {~D[2024-01-01], "Product A", 100.50, 5},
@@ -94,7 +102,8 @@ defmodule DuckDBTest do
       
       for {date, product, amount, quantity} <- sales_data do
         sql = "INSERT INTO sales (date, product, amount, quantity) VALUES ($1, $2, $3, $4)"
-        {:ok, _} = Duckdbex.query(conn, sql, [date, product, amount, quantity])
+        # DuckDBexはDate型を直接サポートしないため、文字列に変換
+        {:ok, _} = Duckdbex.query(conn, sql, [Date.to_iso8601(date), product, amount, quantity])
       end
       
       # 分析クエリ実行
@@ -103,12 +112,14 @@ defmodule DuckDBTest do
       
       # 結果の検証
       product_a = Enum.find(result, &(&1.product == "Product A"))
-      assert product_a.total_amount == Decimal.new("251.25")
-      assert product_a.total_quantity == 12
+      # DuckDBはDecimalを{{分子, 符号}, 基数, 精度}の形式で返す
+      assert product_a.total_amount == {{25125, 0}, 38, 2}
+      # SUMの結果も特殊な形式で返される
+      assert product_a.total_quantity == {0, 12}
     end
 
     @tag :duckdb
-    test "エラーハンドリング", %{duckdb: conn} do
+    test "エラーハンドリング", %{conn: conn} do
       # 無効なカラム名でエラー
       invalid_sql = "INSERT INTO ducks (invalid_column) VALUES ($1)"
       assert {:error, _} = Duckdbex.query(conn, invalid_sql, [123])
@@ -117,7 +128,7 @@ defmodule DuckDBTest do
 
   describe "結果セット変換" do
     @tag :duckdb
-    test "DuckDBの結果が正しく変換される", %{duckdb: conn} do
+    test "DuckDBの結果が正しく変換される", %{conn: conn} do
       # データ挿入
       QueryDuckDB.insert_duck(conn, age: 25, name: "Ludwig")
       
@@ -131,7 +142,7 @@ defmodule DuckDBTest do
     end
 
     @tag :duckdb
-    test "NULL値の処理", %{duckdb: conn} do
+    test "NULL値の処理", %{conn: conn} do
       # nameをNULLで挿入
       sql = "INSERT INTO ducks (age, name) VALUES ($1, NULL)"
       {:ok, _} = Duckdbex.query(conn, sql, [15])

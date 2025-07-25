@@ -32,7 +32,16 @@
       "WebFetch(domain:hexdocs.pm)",
       "Bash(find:*)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_column_test.exs)",
-      "Bash(DUCKDB_TEST=true mix test test/duckdb_column_test.exs --trace)"
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_column_test.exs --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:61 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:66 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs --only duckdb)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:65 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:90 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:94 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs --formatter Elixir.ExUnit.CLIFormatter)"
     ],
     "deny": []
   }

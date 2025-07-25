@@ -231,26 +231,32 @@ defmodule Yesql.Driver.DuckDB do
             if rows == [] do
               {:ok, []}
             else
-              case hd(rows) do
-                row when is_list(row) and is_tuple(hd(row)) ->
-                  # キーワードリストの場合
-                  formatted_rows = Enum.map(rows, fn row ->
-                    Enum.into(row, %{})
-                  end)
-                  {:ok, formatted_rows}
-                  
-                _ ->
-                  # 通常のリストの場合、カラム名とマッピング
-                  if columns && length(columns) > 0 do
-                    atom_columns = Enum.map(columns, &to_atom_key/1)
+              # INSERT/UPDATE/DELETEの結果を特別処理
+              # DuckDBは "Count" カラムで影響を受けた行数を返す
+              if columns == ["Count"] and length(rows) == 1 do
+                {:ok, []}
+              else
+                case hd(rows) do
+                  row when is_list(row) and is_tuple(hd(row)) ->
+                    # キーワードリストの場合
                     formatted_rows = Enum.map(rows, fn row ->
-                      atom_columns |> Enum.zip(row) |> Enum.into(%{})
+                      Enum.into(row, %{})
                     end)
                     {:ok, formatted_rows}
-                  else
-                    # カラム情報がない場合はそのまま返す
-                    {:ok, rows}
-                  end
+                    
+                  _ ->
+                    # 通常のリストの場合、カラム名とマッピング
+                    if columns && length(columns) > 0 do
+                      atom_columns = Enum.map(columns, &to_atom_key/1)
+                      formatted_rows = Enum.map(rows, fn row ->
+                        atom_columns |> Enum.zip(row) |> Enum.into(%{})
+                      end)
+                      {:ok, formatted_rows}
+                    else
+                      # カラム情報がない場合はそのまま返す
+                      {:ok, rows}
+                    end
+                end
               end
             end
             
@@ -296,6 +302,11 @@ defmodule Yesql.Driver.DuckDB do
       end
       defp quote_value(true), do: "TRUE"
       defp quote_value(false), do: "FALSE"
+      defp quote_value(%Date{} = date), do: "'#{Date.to_iso8601(date)}'"
+      defp quote_value(%DateTime{} = datetime), do: "'#{DateTime.to_iso8601(datetime)}'"
+      defp quote_value(%NaiveDateTime{} = datetime), do: "'#{NaiveDateTime.to_iso8601(datetime)}'"
+      defp quote_value(%Time{} = time), do: "'#{Time.to_iso8601(time)}'"
+      defp quote_value(%Decimal{} = decimal), do: Decimal.to_string(decimal)
       defp quote_value(value), do: "'#{inspect(value)}'"
     end
   end
