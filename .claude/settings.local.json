@@ -24,7 +24,9 @@
       "Bash(chmod:*)",
       "Bash(rm:*)",
       "Bash(mix clean:*)",
-      "Bash(mix run:*)"
+      "Bash(mix run:*)",
+      "Bash(ls:*)",
+      "Bash(# 設定ガイドをconfigurationへ移動\nmv guides/*_configuration.md docs/guides/configuration/\n\n# 機能ガイドをfeaturesへ移動\nmv guides/streaming_guide.md docs/guides/features/\nmv guides/migration_guide.md docs/guides/features/\n\n# 使用例をexamplesへ移動\nmv guides/YESQL_NESTED_MODULE_EXAMPLE.md docs/guides/examples/nested_module_example.md\nmv guides/DUCKDB_PARAMETER_LIMITATION.md docs/guides/features/duckdb_parameter_support.md\n\n# チェックリストを開発者向けへ\nmv guides/production_checklist.md docs/development/\n\n# 内部仕様書を移動\nmv SystemConfiguration.md docs/development/internal/system_configuration_v1.md\nmv NewSystemConfiguration.md docs/development/internal/system_configuration_v2.md\nmv ToDo.md docs/development/internal/\n\n# 分析文書を移動\nmv analysis/* docs/analysis/\n\n# トラブルシューティングを移動\nmv troubleshooting/* docs/troubleshooting/\n\n# 空ディレクトリを削除\nrmdir guides analysis troubleshooting)"
     ],
     "deny": []
   }

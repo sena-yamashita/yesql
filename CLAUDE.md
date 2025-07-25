@@ -55,52 +55,61 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## ドキュメント管理方針
 
-新しいドキュメントを作成する際は、以下の方針に従ってください：
+すべてのドキュメントは`docs/`ディレクトリ配下で管理します。
 
 ### ディレクトリ構成
 
 1. **ルートディレクトリ** (`/`)
-   - プロジェクトの主要な説明文書（README.md、CHANGELOG.md、CONTRIBUTING.md等）
-   - 開発者向けの内部管理文書（CLAUDE.md、SystemConfiguration.md等）
+   - プロジェクトの主要な説明文書のみ（README.md、CHANGELOG.md、CONTRIBUTING.md、RELEASE_NOTES.md）
+   - Claude用の指示書（CLAUDE.md）
 
-2. **guides/** 
-   - ユーザー向けの設定・使用ガイド
-   - 機能説明（ストリーミング、マルチドライバー等）
-   - 実装例やサンプルコード
+2. **docs/guides/** - ユーザー向けガイド
+   - **configuration/** - 各データベースドライバーの設定ガイド
+   - **features/** - 機能説明（ストリーミング、パラメータサポート等）
+   - **examples/** - 使用例とサンプルコード
 
-3. **troubleshooting/** （必要に応じて作成）
-   - トラブルシューティングガイド
+3. **docs/development/** - 開発者向けドキュメント
+   - **architecture/** - システムアーキテクチャと設計文書
+   - **internal/** - 内部仕様書、タスク管理
+   - 本番環境チェックリスト等
+
+4. **docs/troubleshooting/** - トラブルシューティング
    - 既知の問題と解決方法
    - FAQ
+   - 外部プロジェクトでの問題解決
 
-4. **analysis/**
-   - 技術分析文書
-   - 設計検討資料
+5. **docs/analysis/** - 技術分析・検討資料
+   - 設計検討文書
+   - パフォーマンス分析
 
 ### ファイル命名規則
 
 - 英語またはローマ字表記を使用（内容は日本語可）
-- スネークケース（snake_case）またはケバブケース（kebab-case）を使用
+- スネークケース（snake_case）を使用
 - 目的が明確にわかる名前を付ける
 
 ### 文書の分類
 
-- **設定ガイド**: `guides/*_configuration.md`
-- **使用ガイド**: `guides/*_guide.md`
-- **トラブルシューティング**: `troubleshooting/*_troubleshooting.md`
-- **分析・検討**: `analysis/*_analysis.md`
+- **設定ガイド**: `docs/guides/configuration/*_configuration.md`
+- **機能ガイド**: `docs/guides/features/*_guide.md` または `*_support.md`
+- **使用例**: `docs/guides/examples/*_example.md`
+- **トラブルシューティング**: `docs/troubleshooting/*_troubleshooting.md`
+- **内部仕様**: `docs/development/internal/system_configuration_*.md`
 
-### 既存ドキュメントの移動
+### 新規ドキュメント作成時の注意
 
-新しい方針に合わないドキュメントを発見した場合は、適切なディレクトリに移動してください。
+1. 必ず適切なディレクトリに配置する
+2. 既存の命名規則に従う
+3. 日本語で内容を記述する
+4. 関連するドキュメントがある場合はリンクを追加する
 
 ## プロジェクト概要
 
 - YesQLのマルチドライバー対応実装（v2.0.0）
 - 現在サポート: PostgreSQL (Postgrex/Ecto), DuckDB
 - プロトコルベースのドライバーアーキテクチャ
-- 詳細な実装状態は `NewSystemConfiguration.md` を参照
-- タスク管理は `ToDo.md` を参照
+- 詳細な実装状態は `docs/development/internal/system_configuration_v2.md` を参照
+- タスク管理は `docs/development/internal/ToDo.md` を参照
 
 ## 今後の開発方針
 - Elixirは1.14でも動くようにしてください。
@@ -120,7 +129,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - すべての変更にはテストを含める
 - 既存APIの後方互換性を維持
 - パフォーマンスへの影響を考慮
-- 構成が変わればNewSystemConfiguration.mdを必ず更新する
+- 構成が変われば`docs/development/internal/system_configuration_v2.md`を必ず更新する
 
 ### 優先順位
 1. 高：既存機能の安定性維持
@@ -178,7 +187,7 @@ createdb yesql_test
 - **SQLトークナイザー**: Leexを使用した名前付きパラメータ解析
 - **コンパイル時マクロ**: `defquery`による関数生成
 
-詳細な実装については `NewSystemConfiguration.md` を参照。
+詳細な実装については `docs/development/internal/system_configuration_v2.md` を参照。
 
 ### 注意事項
 - Elixir 1.18.4では、Ecto 3.5.xとの互換性問題あり
