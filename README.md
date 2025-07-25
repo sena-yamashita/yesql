@@ -369,7 +369,8 @@ count = stream
 - ✅ MySQL（サーバーサイドカーソル）
 - ✅ DuckDB（Arrow形式対応）
 - ✅ SQLite（ステップ実行）
-- ❌ MSSQL、Oracle（将来対応予定）
+- ✅ MSSQL（ページネーションベース）
+- ✅ Oracle（REF CURSOR/BULK COLLECT）
 
 ### バッチクエリ実行
 

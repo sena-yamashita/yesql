@@ -58,6 +58,37 @@ defmodule StreamTest do
       connections
     end
     
+    # MSSQL
+    connections = if System.get_env("MSSQL_STREAM_TEST") == "true" do
+      {:ok, mssql_conn} = Tds.start_link(
+        hostname: "localhost",
+        username: "sa",
+        password: System.get_env("MSSQL_PASSWORD", "YourStrong!Passw0rd"),
+        database: "yesql_test"
+      )
+      
+      setup_mssql(mssql_conn)
+      Map.put(connections, :mssql, mssql_conn)
+    else
+      connections
+    end
+    
+    # Oracle
+    connections = if System.get_env("ORACLE_STREAM_TEST") == "true" do
+      {:ok, oracle_conn} = Jamdb.Oracle.start_link(
+        hostname: "localhost",
+        port: 1521,
+        database: "XE",
+        username: "yesql_test",
+        password: System.get_env("ORACLE_PASSWORD", "password")
+      )
+      
+      setup_oracle(oracle_conn)
+      Map.put(connections, :oracle, oracle_conn)
+    else
+      connections
+    end
+    
     if connections == %{} do
       :skip
     else
@@ -74,6 +105,8 @@ defmodule StreamTest do
           :mysql -> "SELECT * FROM stream_test WHERE id <= ? ORDER BY id"
           :sqlite -> "SELECT * FROM stream_test WHERE id <= ? ORDER BY id"
           :duckdb -> "SELECT * FROM stream_test WHERE id <= $1 ORDER BY id"
+          :mssql -> "SELECT * FROM stream_test WHERE id <= @p1 ORDER BY id"
+          :oracle -> "SELECT * FROM stream_test WHERE id <= :1 ORDER BY id"
         end
         
         # ストリーミング実行
@@ -305,6 +338,38 @@ defmodule StreamTest do
         assert count == 1000
       end
     end
+    
+    test "MSSQL: ページネーションベースストリーミング", %{connections: connections} do
+      if conn = connections[:mssql] do
+        alias Yesql.Stream.MSSQLStream
+        
+        {:ok, stream} = MSSQLStream.create(conn,
+          "SELECT * FROM stream_test WHERE id <= @p1",
+          [1000],
+          chunk_size: 100
+        )
+        
+        results = stream |> Enum.to_list()
+        assert length(results) == 1000
+        assert hd(results).id == 1
+      end
+    end
+    
+    test "Oracle: REF CURSORストリーミング", %{connections: connections} do
+      if conn = connections[:oracle] do
+        alias Yesql.Stream.OracleStream
+        
+        # 基本的なストリーミング（REF CURSORの実装はドライバー依存）
+        {:ok, stream} = OracleStream.create(conn,
+          "SELECT * FROM stream_test WHERE id <= :1",
+          [1000],
+          chunk_size: 100
+        )
+        
+        count = stream |> Enum.count()
+        assert count == 1000
+      end
+    end
   end
   
   # ヘルパー関数
@@ -418,6 +483,79 @@ defmodule StreamTest do
     Duckdbex.query!(conn, "INSERT INTO stream_test VALUES #{values}")
   end
   
+  defp setup_mssql(conn) do
+    # テーブルを作成
+    Tds.query!(conn, "DROP TABLE IF EXISTS stream_test", [])
+    Tds.query!(conn, """
+    CREATE TABLE stream_test (
+      id INT PRIMARY KEY,
+      value INT,
+      data NVARCHAR(255)
+    )
+    """, [])
+    
+    insert_test_data_mssql(conn, 100000)
+  end
+  
+  defp setup_oracle(conn) do
+    # テーブルを削除（存在する場合）
+    Jamdb.Oracle.query(conn, """
+    BEGIN
+      EXECUTE IMMEDIATE 'DROP TABLE stream_test';
+    EXCEPTION
+      WHEN OTHERS THEN NULL;
+    END;
+    """, [])
+    
+    # テーブルを作成
+    Jamdb.Oracle.query!(conn, """
+    CREATE TABLE stream_test (
+      id NUMBER PRIMARY KEY,
+      value NUMBER,
+      data VARCHAR2(255)
+    )
+    """, [])
+    
+    insert_test_data_oracle(conn, 100000)
+  end
+  
+  defp insert_test_data_mssql(conn, count) do
+    # バッチ挿入で高速化
+    Tds.query!(conn, "BEGIN TRANSACTION", [])
+    
+    # バッチ単位で挿入
+    Enum.chunk_every(1..count, 1000)
+    |> Enum.each(fn chunk ->
+      values = chunk
+      |> Enum.map(fn i -> "(#{i}, #{i}, 'Data for row #{i}')" end)
+      |> Enum.join(",")
+      
+      Tds.query!(conn, "INSERT INTO stream_test (id, value, data) VALUES #{values}", [])
+    end)
+    
+    Tds.query!(conn, "COMMIT", [])
+  end
+  
+  defp insert_test_data_oracle(conn, count) do
+    # バッチ挿入で高速化
+    Enum.chunk_every(1..count, 1000)
+    |> Enum.each(fn chunk ->
+      # 複数行INSERT（Oracle 12c以降）
+      values = chunk
+      |> Enum.map(fn i -> "INTO stream_test VALUES (#{i}, #{i}, 'Data for row #{i}')" end)
+      |> Enum.join("\n")
+      
+      Jamdb.Oracle.query!(conn, """
+      INSERT ALL
+      #{values}
+      SELECT 1 FROM DUAL
+      """, [])
+    end)
+    
+    # コミット
+    Jamdb.Oracle.query!(conn, "COMMIT", [])
+  end
+  
   defp get_conn({_db, conn}), do: conn  # DuckDB
   defp get_conn(conn), do: conn
   
@@ -425,4 +563,6 @@ defmodule StreamTest do
   defp get_simple_select_sql(:mysql), do: "SELECT * FROM stream_test WHERE id <= ? ORDER BY id"
   defp get_simple_select_sql(:sqlite), do: "SELECT * FROM stream_test WHERE id <= ? ORDER BY id"
   defp get_simple_select_sql(:duckdb), do: "SELECT * FROM stream_test WHERE id <= $1 ORDER BY id"
+  defp get_simple_select_sql(:mssql), do: "SELECT * FROM stream_test WHERE id <= @p1 ORDER BY id"
+  defp get_simple_select_sql(:oracle), do: "SELECT * FROM stream_test WHERE id <= :1 ORDER BY id"
 end

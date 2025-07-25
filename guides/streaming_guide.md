@@ -239,6 +239,129 @@ alias Yesql.Stream.SQLiteStream
 )
 ```
 
+### MSSQL (SQL Server)
+
+OFFSET/FETCHベースのストリーミング実装：
+
+```elixir
+alias Yesql.Stream.MSSQLStream
+
+# 基本的なストリーミング（ページネーション）
+{:ok, stream} = MSSQLStream.create(conn,
+  "SELECT * FROM large_table WHERE status = @p1",
+  ["active"],
+  chunk_size: 5000
+)
+
+# カーソルエミュレーションを使用
+{:ok, stream} = MSSQLStream.create_with_cursor_emulation(conn,
+  "SELECT * FROM products WHERE price > @p1",
+  [100],
+  chunk_size: 1000
+)
+
+# 一時テーブルを使用した高速ストリーミング
+{:ok, stream} = MSSQLStream.create_temp_result_stream(conn,
+  "SELECT * FROM orders WHERE order_date >= @p1",
+  [~D[2024-01-01]],
+  chunk_size: 10000
+)
+
+# 並列パーティションストリーミング
+{:ok, stream} = MSSQLStream.create_parallel_partitioned(
+  [conn1, conn2, conn3, conn4],
+  "sales_data",
+  "year = 2024",
+  chunk_size: 5000
+)
+
+# インデックスヒントを使用した最適化
+{:ok, stream} = MSSQLStream.create_indexed_stream(conn,
+  "users",
+  "created_at",
+  start_value: ~D[2024-01-01],
+  end_value: ~D[2024-12-31]
+)
+
+# BCPスタイルのエクスポート
+{:ok, count} = MSSQLStream.export_to_file(conn,
+  "SELECT * FROM customers",
+  [],
+  "customers.csv",
+  format: :csv,
+  include_headers: true
+)
+```
+
+### Oracle
+
+REF CURSORとBULK COLLECTを活用した高度なストリーミング：
+
+```elixir
+alias Yesql.Stream.OracleStream
+
+# REF CURSORベースのストリーミング
+{:ok, stream} = OracleStream.create(conn,
+  "SELECT * FROM transactions WHERE amount > :1",
+  [1000],
+  chunk_size: 5000,
+  parallel: true  # パラレル実行ヒント
+)
+
+# BULK COLLECTを使用した高速ストリーミング
+{:ok, stream} = OracleStream.create_bulk_collect_stream(conn,
+  "SELECT * FROM log_entries WHERE log_date = :1",
+  [~D[2024-07-25]],
+  chunk_size: 10000
+)
+
+# パーティション並列ストリーミング
+{:ok, stream} = OracleStream.create_parallel_partitioned(
+  [conn1, conn2, conn3, conn4],
+  "SALES_HISTORY",
+  "sale_id",
+  chunk_size: 5000
+)
+
+# 結果キャッシュを使用した効率化
+{:ok, stream} = OracleStream.create_cached_stream(conn,
+  "SELECT * FROM reference_data",
+  [],
+  chunk_size: 1000
+)
+
+# In-Memoryオプションを活用
+{:ok, stream} = OracleStream.create_inmemory_stream(conn,
+  "high_priority_table",
+  "status = 'ACTIVE'",
+  chunk_size: 10000
+)
+
+# 分析関数を使用したウィンドウストリーミング
+{:ok, stream} = OracleStream.create_windowed_stream(conn,
+  "SELECT * FROM time_series_data",
+  "timestamp",  # ウィンドウ列
+  3600,        # ウィンドウサイズ（秒）
+  overlap: 300  # オーバーラップ（秒）
+)
+
+# XMLType結果のストリーミング
+{:ok, stream} = OracleStream.create_xml_stream(conn,
+  "SELECT * FROM xml_documents",
+  [],
+  chunk_size: 100
+)
+
+# Oracle UTL_FILEを使用した直接エクスポート
+{:ok, count} = OracleStream.export_to_file(conn,
+  "SELECT * FROM export_data",
+  [],
+  "export_data.csv",
+  format: :csv,
+  oracle_directory: "DATA_EXPORT_DIR"
+)
+```
+
 ## パフォーマンス最適化
 
 ### チャンクサイズの調整

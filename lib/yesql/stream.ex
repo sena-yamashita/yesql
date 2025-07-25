@@ -160,8 +160,8 @@ defmodule Yesql.Stream do
   defp supports_streaming?(%Yesql.Driver.MySQL{}), do: true
   defp supports_streaming?(%Yesql.Driver.DuckDB{}), do: true
   defp supports_streaming?(%Yesql.Driver.SQLite{}), do: true
-  defp supports_streaming?(%Yesql.Driver.MSSQL{}), do: false  # Tdsは現在ストリーミング未対応
-  defp supports_streaming?(%Yesql.Driver.Oracle{}), do: false  # jamdb_oracleも未対応
+  defp supports_streaming?(%Yesql.Driver.MSSQL{}), do: true
+  defp supports_streaming?(%Yesql.Driver.Oracle{}), do: true
   defp supports_streaming?(_), do: false
   
   defp create_stream(%Yesql.Driver.Postgrex{} = driver, conn, sql, params, chunk_size, opts) do
@@ -309,6 +309,26 @@ defmodule Yesql.Stream do
     )
     
     {:ok, stream}
+  end
+  
+  defp create_stream(%Yesql.Driver.MSSQL{} = driver, conn, sql, params, chunk_size, opts) do
+    # MSSQLのストリーミング実装
+    alias Yesql.Stream.MSSQLStream
+    
+    case MSSQLStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size)) do
+      {:ok, stream} -> {:ok, stream}
+      error -> error
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.Oracle{} = driver, conn, sql, params, chunk_size, opts) do
+    # Oracleのストリーミング実装
+    alias Yesql.Stream.OracleStream
+    
+    case OracleStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size)) do
+      {:ok, stream} -> {:ok, stream}
+      error -> error
+    end
   end
   
   defp create_stream(_, _, _, _, _, _) do
