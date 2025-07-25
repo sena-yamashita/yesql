@@ -21,7 +21,8 @@
       "Bash(--target master)",
       "Bash(mv:*)",
       "WebFetch(domain:hex.pm)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

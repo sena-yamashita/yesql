@@ -5,6 +5,32 @@
 フォーマットは[Keep a Changelog](https://keepachangelog.com/ja/1.0.0/)に基づいており、
 このプロジェクトは[セマンティック バージョニング](https://semver.org/lang/ja/)に準拠しています。
 
+## [2.1.0] - 2025-07-25
+
+### 追加
+- **ストリーミング結果セットのサポート** - 大規模データセットをメモリ効率的に処理
+  - 統一的なストリーミングAPI（`Yesql.Stream`）
+  - PostgreSQL: カーソルベースストリーミング（同期/非同期対応）
+  - MySQL: サーバーサイドカーソル実装
+  - DuckDB: Arrow形式とparallel scanningのサポート
+  - SQLite: ステップ実行とFTS5対応
+  - MSSQL: OFFSET/FETCHベースのページネーション実装
+  - Oracle: REF CURSORとBULK COLLECTを活用
+- ストリーミングガイド（`guides/streaming_guide.md`）
+- 各ドライバー固有のストリーミング最適化
+  - PostgreSQL: 非同期ストリーミング、統計情報収集
+  - MySQL: パーティション並列処理、ファイルエクスポート
+  - DuckDB: Parquetエクスポート、ウィンドウストリーミング
+  - SQLite: メモリ最適化、インデックス活用
+  - MSSQL: カーソルエミュレーション、一時テーブル活用
+  - Oracle: In-Memory最適化、XMLTypeストリーミング
+
+### 改善
+- 全ドライバーでストリーミング機能が利用可能に
+- ストリーミングテストスイートの追加
+- README.mdにストリーミング使用例を追加
+- Ectoドライバーとの比較分析ドキュメント（`analysis/ecto_vs_individual_drivers.md`）
+
 ## [2.0.0] - 2025-07-24
 
 ### 追加
