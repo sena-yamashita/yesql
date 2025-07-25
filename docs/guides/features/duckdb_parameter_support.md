@@ -2,7 +2,7 @@
 
 ## 概要
 
-YesQLのDuckDBドライバーは、DuckDBexライブラリを通じてパラメータクエリをサポートしています。v2.1.3以降、**適応的パラメータ処理**により、DuckDBの制限を自動的かつ透過的に回避します。
+YesQLのDuckDBドライバーは、DuckDBexライブラリを通じてパラメータクエリをサポートしています。v2.1.3以降、**適応的パラメータ処理**により、DuckDBの制限を自動的かつ透過的に回避します。さらに、**複数ステートメントの実行**もサポートしています。
 
 ## 適応的パラメータ処理（v2.1.3以降）
 
@@ -58,6 +58,59 @@ Yesql.Driver.execute(driver, conn,
 # 2回目以降: キャッシュから最適な方法を選択
 {:ok, result2} = Yesql.Driver.execute(driver, conn, sql, params)  # 600μs
 ```
+
+## 複数ステートメントのサポート
+
+### 概要
+
+DuckDBexの`query/3`（パラメータ付き）は複数ステートメントをサポートしていませんが、YesQLのDuckDBドライバーは自動的にこの制限を回避します：
+
+1. 文字列置換モードで実行される場合、複数ステートメントを自動検出
+2. セミコロンで分割して個別に実行
+3. エラーが発生した場合は即座に停止
+4. 最後のステートメントの結果を返す
+
+### 使用例
+
+```elixir
+# SQLファイル: queries/create_and_insert.sql
+CREATE TABLE IF NOT EXISTS :table_name AS 
+SELECT * FROM read_csv_auto(:file_path) WHERE 1=0;
+
+INSERT INTO :table_name 
+SELECT * FROM read_csv_auto(:file_path);
+```
+
+```elixir
+# Elixirコード
+defmodule MyApp.Queries do
+  use Yesql, driver: :duckdb
+  
+  Yesql.defquery("queries/create_and_insert.sql")
+end
+
+# 使用時 - 複数ステートメントが自動的に実行される
+MyApp.Queries.create_and_insert(conn, 
+  table_name: "sales_data",
+  file_path: "/path/to/sales.csv"
+)
+```
+
+### トランザクション処理
+
+```sql
+-- queries/transaction_import.sql
+BEGIN TRANSACTION;
+CREATE TABLE :table_name (id INTEGER, name VARCHAR, value DOUBLE);
+INSERT INTO :table_name VALUES (1, 'Test', 100.0);
+COMMIT;
+```
+
+### 注意事項
+
+- エラーが発生した場合、そこで実行が停止します
+- トランザクションは明示的に管理する必要があります
+- 各ステートメントは独立して実行されるため、一部のみ成功する可能性があります
 
 ## 使用例
 

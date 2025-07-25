@@ -103,11 +103,16 @@ defmodule Yesql.Driver.DuckDB do
       defp execute_with_replacement(conn, sql, params) do
         replaced_sql = replace_parameters(sql, params)
         
-        case Duckdbex.query(conn, replaced_sql, []) do
-          {:ok, result_ref} ->
-            fetch_and_format_results(result_ref)
-          error ->
-            error
+        # 複数ステートメントをチェック
+        if contains_multiple_statements?(replaced_sql) do
+          execute_multiple_statements(conn, replaced_sql)
+        else
+          case Duckdbex.query(conn, replaced_sql, []) do
+            {:ok, result_ref} ->
+              fetch_and_format_results(result_ref)
+            error ->
+              error
+          end
         end
       end
       
@@ -119,6 +124,7 @@ defmodule Yesql.Driver.DuckDB do
           "Values were not provided",
           "prepared statement parameter",
           "Cannot use positional parameters",
+          "Cannot prepare multiple statements",
           "Binder Error",
           "Invalid Input Error",
           "Parser Error: syntax error at or near \"$",
@@ -130,6 +136,51 @@ defmodule Yesql.Driver.DuckDB do
         Enum.any?(patterns, &String.contains?(error_msg, &1))
       end
       defp is_parameter_error?(_), do: false
+      
+      # 複数ステートメントを含むかチェック
+      defp contains_multiple_statements?(sql) do
+        # コメントと文字列リテラルを除外してセミコロンを検出
+        # 簡易的な実装：末尾以外のセミコロンがあれば複数ステートメント
+        trimmed = String.trim(sql)
+        
+        # セミコロンで分割して、空でないステートメントが2つ以上あるかチェック
+        statements = trimmed
+          |> String.split(";")
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+        
+        length(statements) > 1
+      end
+      
+      # 複数ステートメントを実行
+      defp execute_multiple_statements(conn, sql) do
+        statements = sql
+          |> String.split(";")
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+        
+        # 各ステートメントを順番に実行
+        results = Enum.reduce_while(statements, {:ok, []}, fn stmt, {:ok, acc} ->
+          case Duckdbex.query(conn, stmt, []) do
+            {:ok, result_ref} ->
+              case fetch_and_format_results(result_ref) do
+                {:ok, result} ->
+                  {:cont, {:ok, acc ++ [result]}}
+                error ->
+                  {:halt, error}
+              end
+            error ->
+              {:halt, error}
+          end
+        end)
+        
+        # 最後の結果を返す（通常、最後のステートメントの結果が重要）
+        case results do
+          {:ok, []} -> {:ok, %{rows: [], columns: []}}
+          {:ok, all_results} -> {:ok, List.last(all_results)}
+          error -> error
+        end
+      end
       
       # パラメータを置換
       defp replace_parameters(sql, params) do
