@@ -164,184 +164,61 @@ defmodule Yesql.Stream do
   defp supports_streaming?(%Yesql.Driver.Oracle{}), do: true
   defp supports_streaming?(_), do: false
   
-  defp create_stream(%Yesql.Driver.Postgrex{} = driver, conn, sql, params, chunk_size, opts) do
-    # PostgreSQLのストリーミング実装
-    stream = Stream.resource(
-      # 初期化
-      fn ->
-        case Postgrex.stream(conn, sql, params, max_rows: chunk_size) do
-          %Postgrex.Stream{} = stream -> stream
-          error -> throw({:error, error})
-        end
-      end,
-      
-      # 次のチャンクを取得
-      fn stream ->
-        case Postgrex.Stream.next(stream) do
-          {:ok, %{rows: rows}} when rows != [] ->
-            # ドライバーのprocess_resultを使って結果を変換
-            {:ok, processed} = Driver.process_result(driver, {:ok, %{rows: rows, columns: stream.columns}})
-            {processed, stream}
-            
-          _ ->
-            {:halt, stream}
-        end
-      end,
-      
-      # クリーンアップ
-      fn stream ->
-        Postgrex.Stream.close(stream)
-      end
-    )
-    
-    {:ok, stream}
-  rescue
-    e -> {:error, e}
-  end
-  
-  defp create_stream(%Yesql.Driver.MySQL{} = driver, conn, sql, params, chunk_size, opts) do
-    # MySQLのストリーミング実装
-    stream = Stream.resource(
-      # 初期化
-      fn ->
-        # MyXQLはストリーミングをquery_manyで実現
-        ref = make_ref()
-        Task.async(fn ->
-          MyXQL.stream(conn, sql, params, max_rows: chunk_size)
-        end)
-      end,
-      
-      # 次のチャンクを取得
-      fn task ->
-        case Task.yield(task, 100) || Task.shutdown(task) do
-          {:ok, %MyXQL.Stream{} = myxql_stream} ->
-            myxql_stream
-            |> Stream.flat_map(fn %{rows: rows, columns: columns} ->
-              {:ok, processed} = Driver.process_result(driver, {:ok, %{rows: rows, columns: columns}})
-              processed
-            end)
-            |> Enum.to_list()
-            |> case do
-              [] -> {:halt, task}
-              rows -> {rows, task}
-            end
-            
-          _ ->
-            {:halt, task}
-        end
-      end,
-      
-      # クリーンアップ
-      fn _task -> :ok end
-    )
-    
-    {:ok, stream}
-  end
-  
-  defp create_stream(%Yesql.Driver.DuckDB{} = driver, conn, sql, params, chunk_size, opts) do
-    # DuckDBのストリーミング実装
-    stream = Stream.resource(
-      # 初期化
-      fn ->
-        case Duckdbex.query(conn, sql, params) do
-          {:ok, result_ref} -> {result_ref, chunk_size, 0}
-          error -> throw({:error, error})
-        end
-      end,
-      
-      # 次のチャンクを取得
-      fn {result_ref, chunk_size, offset} ->
-        case Duckdbex.fetch_chunk(result_ref, offset, chunk_size) do
-          {:ok, rows} when rows != [] ->
-            columns = Duckdbex.columns(result_ref)
-            {:ok, processed} = Driver.process_result(driver, {:ok, %{rows: rows, columns: columns}})
-            {processed, {result_ref, chunk_size, offset + length(rows)}}
-            
-          _ ->
-            {:halt, result_ref}
-        end
-      end,
-      
-      # クリーンアップ
-      fn result_ref ->
-        Duckdbex.close_result(result_ref)
-      end
-    )
-    
-    {:ok, stream}
-  end
-  
-  defp create_stream(%Yesql.Driver.SQLite{} = driver, conn, sql, params, chunk_size, opts) do
-    # SQLiteのストリーミング実装（ステップ実行を使用）
-    stream = Stream.resource(
-      # 初期化
-      fn ->
-        case Exqlite.Sqlite3.prepare(conn, sql) do
-          {:ok, statement} ->
-            :ok = Exqlite.Sqlite3.bind(conn, statement, params)
-            columns = Exqlite.Sqlite3.columns(conn, statement)
-            {conn, statement, columns, []}
-          error ->
-            throw({:error, error})
-        end
-      end,
-      
-      # 次のチャンクを取得
-      fn {conn, statement, columns, buffer} ->
-        # バッファが空の場合、新しいデータを取得
-        if buffer == [] do
-          rows = fetch_sqlite_chunk(conn, statement, chunk_size, [])
-          if rows == [] do
-            {:halt, {conn, statement}}
-          else
-            {:ok, processed} = Driver.process_result(driver, {:ok, %{rows: rows, columns: columns}})
-            {processed, {conn, statement, columns, []}}
-          end
-        else
-          {buffer, {conn, statement, columns, []}}
-        end
-      end,
-      
-      # クリーンアップ
-      fn {conn, statement} ->
-        Exqlite.Sqlite3.release(conn, statement)
-      end
-    )
-    
-    {:ok, stream}
-  end
-  
-  defp create_stream(%Yesql.Driver.MSSQL{} = driver, conn, sql, params, chunk_size, opts) do
-    # MSSQLのストリーミング実装
-    alias Yesql.Stream.MSSQLStream
-    
-    case MSSQLStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size)) do
-      {:ok, stream} -> {:ok, stream}
-      error -> error
+  defp create_stream(%Yesql.Driver.Postgrex{} = _driver, conn, sql, params, chunk_size, _opts) do
+    try do
+      module = Module.concat(Yesql.Stream, PostgrexStream)
+      module.create(conn, sql, params, chunk_size: chunk_size)
+    rescue
+      _ -> {:error, :streaming_module_not_available}
     end
   end
   
-  defp create_stream(%Yesql.Driver.Oracle{} = driver, conn, sql, params, chunk_size, opts) do
-    # Oracleのストリーミング実装
-    alias Yesql.Stream.OracleStream
-    
-    case OracleStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size)) do
-      {:ok, stream} -> {:ok, stream}
-      error -> error
+  defp create_stream(%Yesql.Driver.MySQL{} = _driver, conn, sql, params, chunk_size, _opts) do
+    try do
+      module = Module.concat(Yesql.Stream, MySQLStream)
+      module.create(conn, sql, params, chunk_size: chunk_size)
+    rescue
+      _ -> {:error, :streaming_module_not_available}
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.DuckDB{} = _driver, conn, sql, params, chunk_size, _opts) do
+    try do
+      module = Module.concat(Yesql.Stream, DuckDBStream)
+      module.create(conn, sql, params, chunk_size: chunk_size)
+    rescue
+      _ -> {:error, :streaming_module_not_available}
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.SQLite{} = _driver, conn, sql, params, chunk_size, _opts) do
+    try do
+      module = Module.concat(Yesql.Stream, SQLiteStream)
+      module.create(conn, sql, params, chunk_size: chunk_size)
+    rescue
+      _ -> {:error, :streaming_module_not_available}
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.MSSQL{} = _driver, conn, sql, params, chunk_size, opts) do
+    try do
+      module = Module.concat(Yesql.Stream, MSSQLStream)
+      module.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
+    rescue
+      _ -> {:error, :streaming_module_not_available}
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.Oracle{} = _driver, conn, sql, params, chunk_size, opts) do
+    try do
+      module = Module.concat(Yesql.Stream, OracleStream)
+      module.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
+    rescue
+      _ -> {:error, :streaming_module_not_available}
     end
   end
   
   defp create_stream(_, _, _, _, _, _) do
     {:error, :streaming_not_implemented}
-  end
-  
-  # SQLite用のヘルパー関数
-  defp fetch_sqlite_chunk(conn, statement, 0, acc), do: Enum.reverse(acc)
-  defp fetch_sqlite_chunk(conn, statement, remaining, acc) do
-    case Exqlite.Sqlite3.step(conn, statement) do
-      :done -> Enum.reverse(acc)
-      {:row, row} -> fetch_sqlite_chunk(conn, statement, remaining - 1, [row | acc])
-      {:error, _} -> Enum.reverse(acc)
-    end
   end
 end

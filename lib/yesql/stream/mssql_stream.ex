@@ -1,16 +1,17 @@
-defmodule Yesql.Stream.MSSQLStream do
-  @moduledoc """
-  MSSQL（SQL Server）用のストリーミングサポート
-  
-  TdsドライバーはSQL Serverのカーソル機能をネイティブサポートしていないため、
-  以下のアプローチでストリーミングを実装：
-  
-  1. OFFSET/FETCHを使用したページネーション
-  2. 一時テーブルを使用したカーソルエミュレーション
-  3. バッチ処理の最適化
-  """
-  
-  alias Yesql.Driver.MSSQLDriver
+if Code.ensure_loaded?(Tds) do
+  defmodule Yesql.Stream.MSSQLStream do
+    @moduledoc """
+    MSSQL（SQL Server）用のストリーミングサポート
+    
+    TdsドライバーはSQL Serverのカーソル機能をネイティブサポートしていないため、
+    以下のアプローチでストリーミングを実装：
+    
+    1. OFFSET/FETCHを使用したページネーション
+    2. 一時テーブルを使用したカーソルエミュレーション
+    3. バッチ処理の最適化
+    """
+    
+    alias Yesql.Driver.MSSQLDriver
   
   @default_chunk_size 1000
   @max_batch_size 10000
@@ -458,5 +459,6 @@ defmodule Yesql.Stream.MSSQLStream do
       {key, converted_value}
     end)
     |> Enum.into(%{})
+  end
   end
 end

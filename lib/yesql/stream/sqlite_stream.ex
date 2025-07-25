@@ -1,12 +1,13 @@
-defmodule Yesql.Stream.SQLiteStream do
-  @moduledoc """
-  SQLite用のストリーミング実装
-  
-  SQLiteのステップ実行機能を使用して、メモリ効率的にデータを処理します。
-  組み込みデータベースの特性を活かした高速ストリーミングを提供します。
-  """
-  
-  alias Yesql.Driver
+if Code.ensure_loaded?(Exqlite) do
+  defmodule Yesql.Stream.SQLiteStream do
+    @moduledoc """
+    SQLite用のストリーミング実装
+    
+    SQLiteのステップ実行機能を使用して、メモリ効率的にデータを処理します。
+    組み込みデータベースの特性を活かした高速ストリーミングを提供します。
+    """
+    
+    alias Yesql.Driver
   
   @doc """
   SQLite用のストリームを作成
@@ -345,5 +346,6 @@ defmodule Yesql.Stream.SQLiteStream do
         error -> throw(error)
       end
     end)
+  end
   end
 end

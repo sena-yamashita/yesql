@@ -1,11 +1,12 @@
-defmodule Yesql.Stream.PostgrexStream do
-  @moduledoc """
-  PostgreSQL（Postgrex）用のストリーミング実装
-  
-  Postgrexの`stream/4`機能を使用して、大量のデータを効率的に処理します。
-  """
-  
-  alias Yesql.Driver
+if Code.ensure_loaded?(Postgrex) do
+  defmodule Yesql.Stream.PostgrexStream do
+    @moduledoc """
+    PostgreSQL（Postgrex）用のストリーミング実装
+    
+    Postgrexの`stream/4`機能を使用して、大量のデータを効率的に処理します。
+    """
+    
+    alias Yesql.Driver
   
   @doc """
   PostgreSQL用のストリームを作成
@@ -249,5 +250,6 @@ defmodule Yesql.Stream.PostgrexStream do
     # WHERE句に範囲条件を追加
     # これも簡略化された実装
     sql <> " AND id BETWEEN #{start_id} AND #{end_id}"
+  end
   end
 end

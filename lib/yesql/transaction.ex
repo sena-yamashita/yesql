@@ -159,143 +159,275 @@ defmodule Yesql.Transaction do
   
   # トランザクション開始（分離レベル付き）
   
-  defp begin_transaction_with_level(%Yesql.Driver.Postgrex{}, conn, level) do
-    isolation_sql = case level do
-      :read_uncommitted -> "READ UNCOMMITTED"
-      :read_committed -> "READ COMMITTED"
-      :repeatable_read -> "REPEATABLE READ"
-      :serializable -> "SERIALIZABLE"
+  if Code.ensure_loaded?(Postgrex) do
+    defp begin_transaction_with_level(%Yesql.Driver.Postgrex{}, conn, level) do
+      isolation_sql = case level do
+        :read_uncommitted -> "READ UNCOMMITTED"
+        :read_committed -> "READ COMMITTED"
+        :repeatable_read -> "REPEATABLE READ"
+        :serializable -> "SERIALIZABLE"
+      end
+      
+      Postgrex.query(conn, "BEGIN ISOLATION LEVEL #{isolation_sql}", [])
     end
-    
-    Postgrex.query(conn, "BEGIN ISOLATION LEVEL #{isolation_sql}", [])
-  end
-  
-  defp begin_transaction_with_level(%Yesql.Driver.MySQL{}, conn, level) do
-    # MySQLは分離レベルを事前に設定
-    isolation_sql = case level do
-      :read_uncommitted -> "READ UNCOMMITTED"
-      :read_committed -> "READ COMMITTED"
-      :repeatable_read -> "REPEATABLE READ"
-      :serializable -> "SERIALIZABLE"
-    end
-    
-    with {:ok, _} <- MyXQL.query(conn, "SET TRANSACTION ISOLATION LEVEL #{isolation_sql}", []),
-         {:ok, _} <- MyXQL.query(conn, "START TRANSACTION", []) do
-      {:ok, :started}
+  else
+    defp begin_transaction_with_level(%Yesql.Driver.Postgrex{}, _conn, _level) do
+      {:error, :driver_not_loaded}
     end
   end
   
-  defp begin_transaction_with_level(%Yesql.Driver.MSSQL{}, conn, level) do
-    isolation_sql = case level do
-      :read_uncommitted -> "READ UNCOMMITTED"
-      :read_committed -> "READ COMMITTED"
-      :repeatable_read -> "REPEATABLE READ"
-      :serializable -> "SERIALIZABLE"
-      :snapshot -> "SNAPSHOT"  # MSSQL固有
+  if Code.ensure_loaded?(MyXQL) do
+    defp begin_transaction_with_level(%Yesql.Driver.MySQL{}, conn, level) do
+      # MySQLは分離レベルを事前に設定
+      isolation_sql = case level do
+        :read_uncommitted -> "READ UNCOMMITTED"
+        :read_committed -> "READ COMMITTED"
+        :repeatable_read -> "REPEATABLE READ"
+        :serializable -> "SERIALIZABLE"
+      end
+      
+      with {:ok, _} <- MyXQL.query(conn, "SET TRANSACTION ISOLATION LEVEL #{isolation_sql}", []),
+           {:ok, _} <- MyXQL.query(conn, "START TRANSACTION", []) do
+        {:ok, :started}
+      end
     end
-    
-    Tds.query(conn, "SET TRANSACTION ISOLATION LEVEL #{isolation_sql}; BEGIN TRANSACTION", [])
-  end
-  
-  defp begin_transaction_with_level(%Yesql.Driver.Oracle{}, conn, level) do
-    # Oracleは分離レベルをセッションレベルで設定
-    case level do
-      :read_committed ->
-        {:ok, :auto}  # デフォルト
-      :serializable ->
-        Jamdb.Oracle.query(conn, "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", [])
-      _ ->
-        {:error, :unsupported_isolation_level}
+  else
+    defp begin_transaction_with_level(%Yesql.Driver.MySQL{}, _conn, _level) do
+      {:error, :driver_not_loaded}
     end
   end
   
-  defp begin_transaction_with_level(%Yesql.Driver.SQLite{}, conn, _level) do
-    # SQLiteは分離レベルの動的変更をサポートしない
-    Exqlite.query(conn, "BEGIN", [])
+  if Code.ensure_loaded?(Tds) do
+    defp begin_transaction_with_level(%Yesql.Driver.MSSQL{}, conn, level) do
+      isolation_sql = case level do
+        :read_uncommitted -> "READ UNCOMMITTED"
+        :read_committed -> "READ COMMITTED"
+        :repeatable_read -> "REPEATABLE READ"
+        :serializable -> "SERIALIZABLE"
+        :snapshot -> "SNAPSHOT"  # MSSQL固有
+      end
+      
+      Tds.query(conn, "SET TRANSACTION ISOLATION LEVEL #{isolation_sql}; BEGIN TRANSACTION", [])
+    end
+  else
+    defp begin_transaction_with_level(%Yesql.Driver.MSSQL{}, _conn, _level) do
+      {:error, :driver_not_loaded}
+    end
+  end
+  
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp begin_transaction_with_level(%Yesql.Driver.Oracle{}, conn, level) do
+      # Oracleは分離レベルをセッションレベルで設定
+      case level do
+        :read_committed ->
+          {:ok, :auto}  # デフォルト
+        :serializable ->
+          Jamdb.Oracle.query(conn, "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", [])
+        _ ->
+          {:error, :unsupported_isolation_level}
+      end
+    end
+  else
+    defp begin_transaction_with_level(%Yesql.Driver.Oracle{}, _conn, _level) do
+      {:error, :driver_not_loaded}
+    end
+  end
+  
+  if Code.ensure_loaded?(Exqlite) do
+    defp begin_transaction_with_level(%Yesql.Driver.SQLite{}, conn, _level) do
+      # SQLiteは分離レベルの動的変更をサポートしない
+      Exqlite.query(conn, "BEGIN", [])
+    end
+  else
+    defp begin_transaction_with_level(%Yesql.Driver.SQLite{}, _conn, _level) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   defp begin_transaction_with_level(_, _, _), do: {:error, :unsupported_driver}
   
   # コミット
   
-  defp commit_transaction(%Yesql.Driver.Postgrex{}, conn) do
-    Postgrex.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp commit_transaction(%Yesql.Driver.Postgrex{}, conn) do
+      Postgrex.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.MySQL{}, conn) do
-    MyXQL.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp commit_transaction(%Yesql.Driver.MySQL{}, conn) do
+      MyXQL.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.MSSQL{}, conn) do
-    Tds.query(conn, "COMMIT TRANSACTION", [])
+  if Code.ensure_loaded?(Tds) do
+    defp commit_transaction(%Yesql.Driver.MSSQL{}, conn) do
+      Tds.query(conn, "COMMIT TRANSACTION", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.MSSQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.Oracle{}, conn) do
-    Jamdb.Oracle.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp commit_transaction(%Yesql.Driver.Oracle{}, conn) do
+      Jamdb.Oracle.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.SQLite{}, conn) do
-    Exqlite.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp commit_transaction(%Yesql.Driver.SQLite{}, conn) do
+      Exqlite.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.SQLite{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   # ロールバック
   
-  defp rollback_transaction(%Yesql.Driver.Postgrex{}, conn) do
-    Postgrex.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp rollback_transaction(%Yesql.Driver.Postgrex{}, conn) do
+      Postgrex.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.MySQL{}, conn) do
-    MyXQL.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp rollback_transaction(%Yesql.Driver.MySQL{}, conn) do
+      MyXQL.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.MSSQL{}, conn) do
-    Tds.query(conn, "ROLLBACK TRANSACTION", [])
+  if Code.ensure_loaded?(Tds) do
+    defp rollback_transaction(%Yesql.Driver.MSSQL{}, conn) do
+      Tds.query(conn, "ROLLBACK TRANSACTION", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.MSSQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.Oracle{}, conn) do
-    Jamdb.Oracle.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp rollback_transaction(%Yesql.Driver.Oracle{}, conn) do
+      Jamdb.Oracle.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.SQLite{}, conn) do
-    Exqlite.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp rollback_transaction(%Yesql.Driver.SQLite{}, conn) do
+      Exqlite.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.SQLite{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   # セーブポイント
   
-  defp create_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
-    Postgrex.query(conn, "SAVEPOINT #{name}", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp create_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
+      Postgrex.query(conn, "SAVEPOINT #{name}", [])
+    end
+  else
+    defp create_savepoint(%Yesql.Driver.Postgrex{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp create_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
-    MyXQL.query(conn, "SAVEPOINT #{name}", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp create_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
+      MyXQL.query(conn, "SAVEPOINT #{name}", [])
+    end
+  else
+    defp create_savepoint(%Yesql.Driver.MySQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp create_savepoint(%Yesql.Driver.MSSQL{}, conn, name) do
-    Tds.query(conn, "SAVE TRANSACTION #{name}", [])
+  if Code.ensure_loaded?(Tds) do
+    defp create_savepoint(%Yesql.Driver.MSSQL{}, conn, name) do
+      Tds.query(conn, "SAVE TRANSACTION #{name}", [])
+    end
+  else
+    defp create_savepoint(%Yesql.Driver.MSSQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp create_savepoint(%Yesql.Driver.Oracle{}, conn, name) do
-    Jamdb.Oracle.query(conn, "SAVEPOINT #{name}", [])
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp create_savepoint(%Yesql.Driver.Oracle{}, conn, name) do
+      Jamdb.Oracle.query(conn, "SAVEPOINT #{name}", [])
+    end
+  else
+    defp create_savepoint(%Yesql.Driver.Oracle{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp create_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
-    Exqlite.query(conn, "SAVEPOINT #{name}", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp create_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
+      Exqlite.query(conn, "SAVEPOINT #{name}", [])
+    end
+  else
+    defp create_savepoint(%Yesql.Driver.SQLite{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   
   # トランザクション状態確認
   
-  defp check_transaction_status(%Yesql.Driver.Postgrex{}, conn) do
-    case Postgrex.query(conn, "SELECT current_setting('transaction_isolation')", []) do
-      {:ok, _} -> {:ok, true}
-      _ -> {:ok, false}
+  if Code.ensure_loaded?(Postgrex) do
+    defp check_transaction_status(%Yesql.Driver.Postgrex{}, conn) do
+      case Postgrex.query(conn, "SELECT current_setting('transaction_isolation')", []) do
+        {:ok, _} -> {:ok, true}
+        _ -> {:ok, false}
+      end
+    end
+  else
+    defp check_transaction_status(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
     end
   end
   
-  defp check_transaction_status(%Yesql.Driver.MySQL{}, conn) do
-    case MyXQL.query(conn, "SELECT @@in_transaction", []) do
-      {:ok, %{rows: [[1]]}} -> {:ok, true}
-      _ -> {:ok, false}
+  if Code.ensure_loaded?(MyXQL) do
+    defp check_transaction_status(%Yesql.Driver.MySQL{}, conn) do
+      case MyXQL.query(conn, "SELECT @@in_transaction", []) do
+        {:ok, %{rows: [[1]]}} -> {:ok, true}
+        _ -> {:ok, false}
+      end
+    end
+  else
+    defp check_transaction_status(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
     end
   end
   

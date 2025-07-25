@@ -1,12 +1,13 @@
-defmodule Yesql.Stream.DuckDBStream do
-  @moduledoc """
-  DuckDB用のストリーミング実装
-  
-  DuckDBの効率的な分析エンジンを活用して、大規模データセットを
-  ストリーミング処理します。
-  """
-  
-  alias Yesql.Driver
+if Code.ensure_loaded?(Duckdbex) do
+  defmodule Yesql.Stream.DuckDBStream do
+    @moduledoc """
+    DuckDB用のストリーミング実装
+    
+    DuckDBの効率的な分析エンジンを活用して、大規模データセットを
+    ストリーミング処理します。
+    """
+    
+    alias Yesql.Driver
   
   @doc """
   DuckDB用のストリームを作成
@@ -357,10 +358,10 @@ defmodule Yesql.Stream.DuckDBStream do
   defp calculate_window_end(window_id, window_size) do
     DateTime.from_unix!((window_id + 1) * window_size)
   end
-end
+  end
 
-# ストリームバッファのGenServer実装
-defmodule StreamBuffer do
+  # ストリームバッファのGenServer実装
+  defmodule StreamBuffer do
   use GenServer
   
   def init({stream, buffer_size}) do
@@ -419,5 +420,6 @@ defmodule StreamBuffer do
     else
       {:noreply, state}
     end
+  end
   end
 end

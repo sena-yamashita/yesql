@@ -1,16 +1,17 @@
-defmodule Yesql.Stream.OracleStream do
-  @moduledoc """
-  Oracle Database用のストリーミングサポート
-  
-  jamdb_oracleドライバーを使用して、Oracleの高度な機能を活用：
-  
-  1. REF CURSORを使用したカーソルベースストリーミング
-  2. BULK COLLECTによる効率的なデータフェッチ
-  3. パラレル実行のサポート
-  4. ROWNUMベースのページネーション
-  """
-  
-  alias Yesql.Driver.OracleDriver
+if Code.ensure_loaded?(Jamdb.Oracle) do
+  defmodule Yesql.Stream.OracleStream do
+    @moduledoc """
+    Oracle Database用のストリーミングサポート
+    
+    jamdb_oracleドライバーを使用して、Oracleの高度な機能を活用：
+    
+    1. REF CURSORを使用したカーソルベースストリーミング
+    2. BULK COLLECTによる効率的なデータフェッチ
+    3. パラレル実行のサポート
+    4. ROWNUMベースのページネーション
+    """
+    
+    alias Yesql.Driver.OracleDriver
   
   @default_chunk_size 1000
   @max_array_size 10000
@@ -537,5 +538,6 @@ defmodule Yesql.Stream.OracleStream do
       {key, converted_value}
     end)
     |> Enum.into(%{})
+  end
   end
 end

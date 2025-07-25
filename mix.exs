@@ -48,12 +48,9 @@ defmodule Yesql.Mixfile do
 
   def application do
     [
-      extra_applications: [:logger]
-    ] ++ if Mix.env() == :test do
-      [mod: {YesqlTest.Application, []}]
-    else
-      []
-    end
+      extra_applications: [:logger],
+      mod: {Yesql.Application, []}
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

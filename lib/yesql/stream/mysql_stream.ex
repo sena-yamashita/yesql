@@ -1,12 +1,13 @@
-defmodule Yesql.Stream.MySQLStream do
-  @moduledoc """
-  MySQL（MyXQL）用のストリーミング実装
-  
-  MyXQLの`stream/3`機能を使用して、大量のデータを効率的に処理します。
-  MySQLのカーソルベースの結果セット取得を活用します。
-  """
-  
-  alias Yesql.Driver
+if Code.ensure_loaded?(MyXQL) do
+  defmodule Yesql.Stream.MySQLStream do
+    @moduledoc """
+    MySQL（MyXQL）用のストリーミング実装
+    
+    MyXQLの`stream/3`機能を使用して、大量のデータを効率的に処理します。
+    MySQLのカーソルベースの結果セット取得を活用します。
+    """
+    
+    alias Yesql.Driver
   
   @doc """
   MySQL用のストリームを作成
@@ -313,4 +314,5 @@ defmodule Yesql.Stream.MySQLStream do
     end
   end
   defp escape_csv(value), do: to_string(value)
+  end
 end
