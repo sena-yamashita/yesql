@@ -1,5 +1,42 @@
 # Yesql リリースノート
 
+## v2.1.0 (2025-07-25)
+
+### 🎯 主な特徴
+
+#### ストリーミング結果セットのサポート
+全てのデータベースドライバーで大規模データセットをメモリ効率的に処理できるストリーミング機能を追加しました。
+
+### 新機能
+- **統一的なストリーミングAPI** (`Yesql.Stream`)
+- **ドライバー別の最適化実装**:
+  - PostgreSQL: カーソルベース（同期/非同期対応）
+  - MySQL: サーバーサイドカーソル
+  - DuckDB: Arrow形式、並列スキャン
+  - SQLite: ステップ実行、FTS5対応
+  - MSSQL: ページネーション、カーソルエミュレーション
+  - Oracle: REF CURSOR、BULK COLLECT
+
+### 使用例
+```elixir
+# 大規模データのストリーミング処理
+{:ok, stream} = Yesql.Stream.query(conn,
+  "SELECT * FROM large_table WHERE created_at > $1",
+  [~D[2024-01-01]],
+  driver: :postgrex,
+  chunk_size: 1000
+)
+
+stream
+|> Stream.map(&process_row/1)
+|> Stream.filter(&valid?/1)
+|> Enum.count()
+```
+
+### ドキュメント
+- [ストリーミングガイド](guides/streaming_guide.md)を追加
+- Ectoドライバーとの比較分析ドキュメントを追加
+
 ## v2.0.0 (2024-07-24)
 
 このリリースは、オリジナルの[lpil/yesql](https://github.com/lpil/yesql) v1.0.1からフォークし、マルチドライバー対応を追加した最初のメジャーリリースです。
