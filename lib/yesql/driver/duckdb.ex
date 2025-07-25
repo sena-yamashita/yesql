@@ -130,14 +130,20 @@ defmodule Yesql.Driver.DuckDB do
           "read_json",
           "read_parquet",
           "read_excel",
+          "read_xlsx",
           "write_csv",
           "write_parquet",
           "write_json"
         ]
         
-        Enum.any?(file_functions, fn func ->
+        # COPY TO/FROMコマンドもチェック
+        copy_command = String.match?(sql, ~r/COPY\s+.+\s+(TO|FROM)\s+\$/i)
+        
+        file_function = Enum.any?(file_functions, fn func ->
           String.contains?(sql, func <> "(")
         end)
+        
+        copy_command or file_function
       end
       
       # ファイルパラメータを置換
