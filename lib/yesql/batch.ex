@@ -222,69 +222,159 @@ defmodule Yesql.Batch do
     driver_name not in [:duckdb]  # DuckDBは自動コミットモード
   end
   
-  defp begin_transaction(%Yesql.Driver.Postgrex{}, conn) do
-    Postgrex.query(conn, "BEGIN", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp begin_transaction(%Yesql.Driver.Postgrex{}, conn) do
+      Postgrex.query(conn, "BEGIN", [])
+    end
+  else
+    defp begin_transaction(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp begin_transaction(%Yesql.Driver.MySQL{}, conn) do
-    MyXQL.query(conn, "START TRANSACTION", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp begin_transaction(%Yesql.Driver.MySQL{}, conn) do
+      MyXQL.query(conn, "START TRANSACTION", [])
+    end
+  else
+    defp begin_transaction(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp begin_transaction(%Yesql.Driver.MSSQL{}, conn) do
-    Tds.query(conn, "BEGIN TRANSACTION", [])
+  if Code.ensure_loaded?(Tds) do
+    defp begin_transaction(%Yesql.Driver.MSSQL{}, conn) do
+      Tds.query(conn, "BEGIN TRANSACTION", [])
+    end
+  else
+    defp begin_transaction(%Yesql.Driver.MSSQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp begin_transaction(%Yesql.Driver.Oracle{}, conn) do
-    # Oracleは自動的にトランザクションを開始
-    {:ok, :auto}
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp begin_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      # Oracleは自動的にトランザクションを開始
+      {:ok, :auto}
+    end
+  else
+    defp begin_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp begin_transaction(%Yesql.Driver.SQLite{}, conn) do
-    Exqlite.query(conn, "BEGIN TRANSACTION", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp begin_transaction(%Yesql.Driver.SQLite{}, conn) do
+      Exqlite.query(conn, "BEGIN TRANSACTION", [])
+    end
+  else
+    defp begin_transaction(%Yesql.Driver.SQLite{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   defp begin_transaction(_, _), do: {:error, :unsupported_transaction}
   
-  defp commit_transaction(%Yesql.Driver.Postgrex{}, conn) do
-    Postgrex.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp commit_transaction(%Yesql.Driver.Postgrex{}, conn) do
+      Postgrex.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.MySQL{}, conn) do
-    MyXQL.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp commit_transaction(%Yesql.Driver.MySQL{}, conn) do
+      MyXQL.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.MSSQL{}, conn) do
-    Tds.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Tds) do
+    defp commit_transaction(%Yesql.Driver.MSSQL{}, conn) do
+      Tds.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.MSSQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.Oracle{}, conn) do
-    Jamdb.Oracle.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp commit_transaction(%Yesql.Driver.Oracle{}, conn) do
+      Jamdb.Oracle.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp commit_transaction(%Yesql.Driver.SQLite{}, conn) do
-    Exqlite.query(conn, "COMMIT", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp commit_transaction(%Yesql.Driver.SQLite{}, conn) do
+      Exqlite.query(conn, "COMMIT", [])
+    end
+  else
+    defp commit_transaction(%Yesql.Driver.SQLite{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   defp commit_transaction(_, _), do: {:error, :unsupported_transaction}
   
-  defp rollback_transaction(%Yesql.Driver.Postgrex{}, conn) do
-    Postgrex.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Postgrex) do
+    defp rollback_transaction(%Yesql.Driver.Postgrex{}, conn) do
+      Postgrex.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.Postgrex{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.MySQL{}, conn) do
-    MyXQL.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(MyXQL) do
+    defp rollback_transaction(%Yesql.Driver.MySQL{}, conn) do
+      MyXQL.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.MySQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.MSSQL{}, conn) do
-    Tds.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Tds) do
+    defp rollback_transaction(%Yesql.Driver.MSSQL{}, conn) do
+      Tds.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.MSSQL{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.Oracle{}, conn) do
-    Jamdb.Oracle.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp rollback_transaction(%Yesql.Driver.Oracle{}, conn) do
+      Jamdb.Oracle.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.Oracle{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
-  defp rollback_transaction(%Yesql.Driver.SQLite{}, conn) do
-    Exqlite.query(conn, "ROLLBACK", [])
+  if Code.ensure_loaded?(Exqlite) do
+    defp rollback_transaction(%Yesql.Driver.SQLite{}, conn) do
+      Exqlite.query(conn, "ROLLBACK", [])
+    end
+  else
+    defp rollback_transaction(%Yesql.Driver.SQLite{}, _conn) do
+      {:error, :driver_not_loaded}
+    end
   end
   
   defp rollback_transaction(_, _), do: {:error, :unsupported_transaction}
