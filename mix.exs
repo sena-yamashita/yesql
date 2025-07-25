@@ -37,6 +37,7 @@ defmodule Yesql.Mixfile do
         "guides/oracle_configuration.md",
         "guides/sqlite_configuration.md",
         "guides/migration_guide.md",
+        "guides/streaming_guide.md",
         "guides/production_checklist.md"
       ],
       groups_for_extras: [

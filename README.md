@@ -331,6 +331,46 @@ end
 
 ## 新機能（v2.0）
 
+### ストリーミング結果セット
+
+大量のデータをメモリ効率的に処理：
+
+```elixir
+alias Yesql.Stream
+
+# 100万件のデータをストリーミング処理
+{:ok, stream} = Stream.query(conn,
+  "SELECT * FROM large_table WHERE created_at > $1",
+  [~D[2024-01-01]],
+  driver: :postgrex,
+  chunk_size: 1000
+)
+
+# ストリームを処理
+count = stream
+|> Stream.map(&process_row/1)
+|> Stream.filter(&valid?/1)
+|> Enum.count()
+
+# ファイルへのエクスポート
+{:ok, exported} = Stream.process(conn,
+  "SELECT * FROM users WHERE active = true",
+  [],
+  fn row ->
+    IO.puts(file, "#{row.id},#{row.name},#{row.email}")
+  end,
+  driver: :mysql,
+  chunk_size: 5000
+)
+```
+
+サポート状況：
+- ✅ PostgreSQL（カーソルベース）
+- ✅ MySQL（サーバーサイドカーソル）
+- ✅ DuckDB（Arrow形式対応）
+- ✅ SQLite（ステップ実行）
+- ❌ MSSQL、Oracle（将来対応予定）
+
 ### バッチクエリ実行
 
 複数のクエリを効率的に実行：
