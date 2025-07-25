@@ -64,6 +64,10 @@ defmodule Yesql.Mixfile do
       {:duckdbex, "~> 0.3.9", optional: true},
       # MySQL/MariaDB driver
       {:myxql, "~> 0.6", optional: true},
+      # MSSQL driver
+      {:tds, "~> 2.3", optional: true},
+      # Oracle driver
+      {:jamdb_oracle, "~> 0.5", optional: true},
 
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},

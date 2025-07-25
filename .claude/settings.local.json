@@ -19,7 +19,8 @@
       "Bash(--title \"v2.0.0 - マルチドライバー対応\" )",
       "Bash(--notes-file RELEASE_NOTES_v2.0.0.md )",
       "Bash(--target master)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "WebFetch(domain:hex.pm)"
     ],
     "deny": []
   }

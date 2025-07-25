@@ -101,6 +101,8 @@ Yesqlは複数のデータベースドライバーをサポートしています
 - **Ecto** - 任意のEctoリポジトリで使用
 - **DuckDB** - DuckDBex経由の分析データベース
 - **MySQL/MariaDB** - MyXQL経由のMySQLおよびMariaDB
+- **MSSQL** - Tds経由のMicrosoft SQL Server
+- **Oracle** - jamdb_oracle経由のOracle Database
 
 ### DuckDBでの使用
 
@@ -139,6 +141,51 @@ defmodule MyApp.Queries do
   
   # 使用する（MySQLは?形式のパラメータを使用）
   MyApp.Queries.get_users(conn, status: "active", limit: 10)
+end
+```
+
+### MSSQL（SQL Server）での使用
+
+```elixir
+defmodule MyApp.Queries do
+  use Yesql, driver: :mssql
+  
+  # MSSQL接続を開く
+  {:ok, conn} = Tds.start_link(
+    hostname: "localhost",
+    username: "sa", 
+    password: "YourStrong!Passw0rd",
+    database: "myapp_db"
+  )
+  
+  # クエリを定義
+  Yesql.defquery("queries/reports.sql")
+  
+  # 使用する（MSSQLは@p1, @p2...形式のパラメータを使用）
+  MyApp.Queries.monthly_report(conn, month: 12, year: 2024)
+end
+```
+
+### Oracleでの使用
+
+```elixir
+defmodule MyApp.Queries do
+  use Yesql, driver: :oracle
+  
+  # Oracle接続を開く
+  {:ok, conn} = Jamdb.Oracle.start_link(
+    hostname: "localhost",
+    port: 1521,
+    database: "XE",
+    username: "myapp",
+    password: "password"
+  )
+  
+  # クエリを定義
+  Yesql.defquery("queries/analytics.sql")
+  
+  # 使用する（Oracleは:1, :2...形式のパラメータを使用）
+  MyApp.Queries.analytics_summary(conn, start_date: ~D[2024-01-01], end_date: ~D[2024-12-31])
 end
 ```
 
@@ -185,7 +232,11 @@ Yesqlは[Kris JenkinsのClojure Yesql](https://github.com/krisajenkins/yesql)に
 
 - **マルチドライバー対応**: ドライバー抽象化レイヤーの実装により、新しいデータベースドライバーの追加が容易になりました
 - **DuckDBサポート**: [DuckDBex](https://github.com/AlexR2D2/duckdbex)を使用したDuckDBドライバーの実装
+- **MySQL/MariaDBサポート**: [MyXQL](https://github.com/elixir-ecto/myxql)を使用したMySQLドライバーの実装
+- **MSSQLサポート**: [Tds](https://github.com/livehelpnow/tds)を使用したSQL Serverドライバーの実装
+- **Oracleサポート**: [jamdb_oracle](https://github.com/erlangbureau/jamdb_oracle)を使用したOracleドライバーの実装
 - **日本語ドキュメント**: 全てのドキュメントを日本語化
+- **Elixir 1.14互換性**: 最小Elixirバージョンを1.14に更新
 
 ### 開発について
 

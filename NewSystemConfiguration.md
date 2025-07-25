@@ -16,8 +16,11 @@ SQLファイルからElixir関数を自動生成し、型安全なデータベ�
 - プロトコルベースのドライバーアーキテクチャを導入
 - DuckDBサポートを追加
 - MySQL/MariaDBサポートを追加
+- MSSQLサポートを追加
+- Oracleサポートを追加
 - ドライバー固有ロジックの分離とモジュール化
 - 拡張可能な設計への移行
+- Elixir 1.14互換性の確保
 
 ## 2. 現在のアーキテクチャ
 
@@ -34,17 +37,23 @@ yesql/
 │       └── driver/                 # ドライバー実装
 │           ├── duckdb.ex          # DuckDBドライバー
 │           ├── ecto.ex            # Ectoドライバー
+│           ├── mssql.ex           # MSSQLドライバー
 │           ├── mysql.ex           # MySQL/MariaDBドライバー
+│           ├── oracle.ex          # Oracleドライバー
 │           └── postgrex.ex        # Postgrexドライバー
 ├── src/
 │   └── sql_tokenizer.xrl          # Leexトークナイザー定義
 ├── test/
 │   ├── yesql_test.exs            # 既存テストスイート
 │   ├── duckdb_test.exs           # DuckDB専用テスト
+│   ├── mssql_test.exs            # MSSQL専用テスト
 │   ├── mysql_test.exs            # MySQL専用テスト
+│   ├── oracle_test.exs           # Oracle専用テスト
 │   └── sql/
 │       ├── duckdb/               # DuckDB用SQLファイル
-│       └── mysql/                # MySQL用SQLファイル
+│       ├── mssql/                # MSSQL用SQLファイル
+│       ├── mysql/                # MySQL用SQLファイル
+│       └── oracle/               # Oracle用SQLファイル
 └── mix.exs                        # プロジェクト設定（依存関係を含む）
 ```
 
@@ -142,7 +151,21 @@ end
 - MyXQLライブラリを使用
 - 結果をマップのリストとして返却
 
-### 3.4 DuckDBドライバー (lib/yesql/driver/duckdb.ex)
+### 3.4 MSSQLドライバー (lib/yesql/driver/mssql.ex)
+**新規追加 - Microsoft SQL Serverサポート**:
+- パラメータ形式: `@p1, @p2...` (名前付きパラメータ)
+- 名前付きパラメータを番号付き名前付きパラメータに変換
+- Tdsライブラリを使用
+- 結果をマップのリストとして返却
+
+### 3.5 Oracleドライバー (lib/yesql/driver/oracle.ex)
+**新規追加 - Oracle Databaseサポート**:
+- パラメータ形式: `:1, :2...` (位置パラメータ)
+- 名前付きパラメータを番号付き位置パラメータに変換
+- jamdb_oracleライブラリを使用
+- カラム名を小文字に変換して返却
+
+### 3.6 DuckDBドライバー (lib/yesql/driver/duckdb.ex)
 **新規追加 - DuckDB分析エンジンサポート**:
 
 ```elixir
@@ -229,6 +252,20 @@ defmodule MyApp.UserQueries do
   Yesql.defquery("queries/get_users.sql")
 end
 
+# MSSQLドライバーの使用
+defmodule MyApp.Reports do
+  use Yesql, driver: :mssql
+  
+  Yesql.defquery("queries/monthly_report.sql")
+end
+
+# Oracleドライバーの使用
+defmodule MyApp.Analytics do
+  use Yesql, driver: :oracle
+  
+  Yesql.defquery("queries/analytics.sql")
+end
+
 # 実行時のドライバー指定
 Yesql.defquery("queries/dynamic.sql", driver: :ecto, conn: MyApp.Repo)
 ```
@@ -263,6 +300,43 @@ MyApp.UserQueries.get_users(conn,
   created_after: ~D[2024-01-01]
 )
 # => {:ok, [%{id: 1, name: "Alice", status: "active"}, ...]}
+```
+
+### 5.4 MSSQL固有の使用例
+```elixir
+# セットアップ
+{:ok, conn} = Tds.start_link(
+  hostname: "localhost",
+  username: "sa",
+  password: "YourStrong!Passw0rd",
+  database: "myapp_db"
+)
+
+# クエリ実行
+MyApp.Reports.monthly_report(conn,
+  month: 12,
+  year: 2024
+)
+# => {:ok, [%{total_sales: 50000.0, order_count: 120}, ...]}
+```
+
+### 5.5 Oracle固有の使用例
+```elixir
+# セットアップ
+{:ok, conn} = Jamdb.Oracle.start_link(
+  hostname: "localhost",
+  port: 1521,
+  database: "XE",
+  username: "myapp",
+  password: "password"
+)
+
+# クエリ実行
+MyApp.Analytics.analytics_summary(conn,
+  start_date: ~D[2024-01-01],
+  end_date: ~D[2024-12-31]
+)
+# => {:ok, [%{category: "Electronics", revenue: 150000.0}, ...]}
 ```
 
 ## 6. 拡張ポイント
@@ -322,6 +396,9 @@ end
 各ドライバーは独立したテストファイルを持つ：
 - `test/yesql_test.exs` - Postgrex/Ecto
 - `test/duckdb_test.exs` - DuckDB
+- `test/mysql_test.exs` - MySQL/MariaDB
+- `test/mssql_test.exs` - MSSQL
+- `test/oracle_test.exs` - Oracle
 
 ### 7.2 条件付きテスト実行
 ```elixir
@@ -353,15 +430,17 @@ end
 
 ### 9.1 短期計画
 - [x] MySQL/MariaDBドライバーの実装（完了）
+- [x] MSSQLドライバーの実装（完了）
+- [x] Oracleドライバーの実装（完了）
 - [ ] SQLiteドライバーの実装
 - [ ] バッチクエリのサポート
 - [ ] トランザクション管理の改善
 
 ### 9.2 長期計画
-- [ ] MSSQL/Oracleドライバー（優先度：低）
 - [ ] プリペアドステートメントのキャッシング
 - [ ] 非同期クエリ実行のサポート
 - [ ] ストリーミング結果セットの処理
+- [ ] 接続プール管理の統一
 
 ## 10. 移行ガイド
 
@@ -390,5 +469,6 @@ YesQL v2.0.0は、プロトコルベースのドライバーアーキテクチ�
 2. **保守性**: ドライバー固有ロジックの明確な分離
 3. **柔軟性**: 実行時のドライバー選択が可能
 4. **互換性**: 既存コードとの完全な後方互換性
+5. **包括性**: 主要な5つのデータベース（PostgreSQL、MySQL、MSSQL、Oracle、DuckDB）をサポート
 
 この設計により、YesQLは単一データベース向けのツールから、マルチデータベース対応の汎用SQLライブラリへと進化しました。

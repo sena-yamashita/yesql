@@ -11,13 +11,19 @@
 - マルチドライバー対応のためのドライバー抽象化レイヤー（`Yesql.Driver`プロトコル）
 - DuckDBドライバーサポート（`Yesql.Driver.DuckDB`）
 - MySQL/MariaDBドライバーサポート（`Yesql.Driver.MySQL`）
+- MSSQLドライバーサポート（`Yesql.Driver.MSSQL`）
+- Oracleドライバーサポート（`Yesql.Driver.Oracle`）
 - ドライバーファクトリー（`Yesql.DriverFactory`）による動的ドライバー作成
 - DuckDB用テストスイート
 - MySQL用テストスイート
+- MSSQL用テストスイート
+- Oracle用テストスイート
 - マルチドライバー対応のドキュメント（`guides/multi_driver_configuration.md`）
 - MySQLドライバー設定ガイド（`guides/mysql_configuration.md`）
+- MSSQLドライバー設定ガイド（`guides/mssql_configuration.md`）
+- Oracleドライバー設定ガイド（`guides/oracle_configuration.md`）
 - 日本語ドキュメント（README.md、全てのガイド）
-- プロジェクト管理ドキュメント（CLAUDE.md、SystemConfiguration.md、ToDo.md）
+- プロジェクト管理ドキュメント（CLAUDE.md、SystemConfiguration.md、ToDo.md、NewSystemConfiguration.md）
 
 ### 変更
 - 最小Elixirバージョンを1.14に更新
@@ -29,8 +35,8 @@
 
 ### 技術的詳細
 - **破壊的変更なし**: 既存のAPIは完全に互換性を維持
-- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`、`:mysql`のシンボル形式もサポート
-- **依存関係**: DuckDBexとMyXQLを`optional: true`として追加
+- **新しいドライバー形式**: `:postgrex`、`:ecto`、`:duckdb`、`:mysql`、`:mssql`、`:oracle`のシンボル形式もサポート
+- **依存関係**: DuckDBex、MyXQL、Tds、jamdb_oracleを`optional: true`として追加
 
 ### 開発
 - Claude Code (Anthropic)を使用したAIペアプログラミングによる実装
