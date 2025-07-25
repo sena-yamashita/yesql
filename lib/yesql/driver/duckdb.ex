@@ -3,26 +3,95 @@ defmodule Yesql.Driver.DuckDB do
   DuckDB用のYesqlドライバー実装
   
   DuckDBexライブラリを使用してDuckDBデータベースと通信します。
+  
+  ## パラメータ処理の適応的アプローチ
+  
+  このドライバーは適応的なパラメータ処理を実装しています：
+  
+  1. まずネイティブパラメータバインディングを試行
+  2. パラメータエラーが発生した場合、自動的に文字列置換にフォールバック
+  3. クエリパターンをキャッシュして、2回目以降は最適な方法を即座に選択
+  
+  これにより、DuckDBの新しい関数や仕様変更に自動的に対応できます。
   """
   
   defstruct []
   
   if match?({:module, _}, Code.ensure_compiled(Duckdbex)) do
     defimpl Yesql.Driver, for: __MODULE__ do
+      # ETS tableを使用してクエリパターンをキャッシュ
+      @cache_table :yesql_duckdb_query_cache
+      
       def execute(_driver, conn, sql, params) do
-        # DuckDBexはパラメータクエリをサポートしているが、
-        # read_csv_auto等の関数内では動作しない
-        final_sql = if contains_file_function?(sql) do
-          # ファイル関数の場合は文字列置換を使用
-          replace_file_parameters(sql, params)
-        else
-          sql
+        ensure_cache_exists()
+        
+        # クエリパターンからキャッシュキーを生成
+        cache_key = generate_cache_key(sql)
+        
+        case lookup_cache(cache_key) do
+          {:ok, :parameterized} ->
+            execute_parameterized(conn, sql, params)
+          {:ok, :string_replacement} ->
+            execute_with_replacement(conn, sql, params)
+          :not_found ->
+            # キャッシュにない場合は試行してキャッシュに保存
+            detect_and_execute(conn, sql, params, cache_key)
         end
-        
-        # ファイル関数の場合はパラメータなしで実行
-        final_params = if contains_file_function?(sql), do: [], else: params
-        
-        case Duckdbex.query(conn, final_sql, final_params) do
+      end
+      
+      # キャッシュテーブルが存在することを確認
+      defp ensure_cache_exists do
+        if :ets.whereis(@cache_table) == :undefined do
+          :ets.new(@cache_table, [:named_table, :public, :set])
+        end
+      rescue
+        ArgumentError -> :ok
+      end
+      
+      # クエリパターンからキャッシュキーを生成
+      defp generate_cache_key(sql) do
+        # パラメータを除いたクエリ構造をキーとして使用
+        sql
+        |> String.replace(~r/\$\d+/, "?")
+        |> String.downcase()
+        |> String.trim()
+        |> :erlang.phash2()
+      end
+      
+      # キャッシュから検索
+      defp lookup_cache(key) do
+        case :ets.lookup(@cache_table, key) do
+          [{^key, method}] -> {:ok, method}
+          [] -> :not_found
+        end
+      rescue
+        _ -> :not_found
+      end
+      
+      # 適切な実行方法を検出して実行
+      defp detect_and_execute(conn, sql, params, cache_key) do
+        case Duckdbex.query(conn, sql, params) do
+          {:ok, result_ref} ->
+            # パラメータ付きクエリが成功
+            :ets.insert(@cache_table, {cache_key, :parameterized})
+            fetch_and_format_results(result_ref)
+          {:error, error} ->
+            # エラーチェックはガード外で行う
+            if is_parameter_error?(error) do
+              # 文字列置換を試行
+              :ets.insert(@cache_table, {cache_key, :string_replacement})
+              execute_with_replacement(conn, sql, params)
+            else
+              {:error, error}
+            end
+          error ->
+            error
+        end
+      end
+      
+      # パラメータ付きクエリを実行
+      defp execute_parameterized(conn, sql, params) do
+        case Duckdbex.query(conn, sql, params) do
           {:ok, result_ref} ->
             fetch_and_format_results(result_ref)
           error ->
@@ -30,6 +99,49 @@ defmodule Yesql.Driver.DuckDB do
         end
       end
       
+      # 文字列置換を使用してクエリを実行
+      defp execute_with_replacement(conn, sql, params) do
+        replaced_sql = replace_parameters(sql, params)
+        
+        case Duckdbex.query(conn, replaced_sql, []) do
+          {:ok, result_ref} ->
+            fetch_and_format_results(result_ref)
+          error ->
+            error
+        end
+      end
+      
+      # エラーがパラメータ関連かどうか判定
+      defp is_parameter_error?(error_msg) when is_binary(error_msg) do
+        # DuckDBのパラメータエラーパターンを検出
+        patterns = [
+          # 英語のエラーメッセージ
+          "Values were not provided",
+          "prepared statement parameter",
+          "Cannot use positional parameters",
+          "Binder Error",
+          "Invalid Input Error",
+          "Parser Error: syntax error at or near \"$",
+          # パラメータに関連する一般的なキーワード
+          "parameter",
+          "$1", "$2", "$3"  # パラメータ記号そのもの
+        ]
+        
+        Enum.any?(patterns, &String.contains?(error_msg, &1))
+      end
+      defp is_parameter_error?(_), do: false
+      
+      # パラメータを置換
+      defp replace_parameters(sql, params) do
+        params
+        |> Enum.with_index(1)
+        |> Enum.reduce(sql, fn {value, idx}, acc ->
+          quoted_value = quote_value(value)
+          String.replace(acc, "$#{idx}", quoted_value)
+        end)
+      end
+      
+      # 結果を取得してフォーマット
       defp fetch_and_format_results(result_ref) do
         # Duckdbex.fetch_allは直接行を返す（{:ok, rows}ではない）
         rows = Duckdbex.fetch_all(result_ref)
@@ -111,51 +223,14 @@ defmodule Yesql.Driver.DuckDB do
         Enum.map(row, fn {key, _} -> Atom.to_string(key) end)
       end
       defp extract_columns(_) do
-        # DuckDBexは列名を返さないため、ハードコード
+        # DuckDBexは列名を返さないため、デフォルト値を返す
         # 実際の実装では、別途クエリで列情報を取得する必要がある
-        ["id", "name", "value", "created_at"]
+        []
       end
       
       # 文字列またはアトムをアトムに変換
       defp to_atom_key(key) when is_atom(key), do: key
       defp to_atom_key(key) when is_binary(key), do: String.to_atom(key)
-      
-      # ファイル関数を含むかチェック
-      defp contains_file_function?(sql) do
-        # DuckDBのファイル関数のリスト
-        file_functions = [
-          "read_csv_auto",
-          "read_csv",
-          "read_json_auto", 
-          "read_json",
-          "read_parquet",
-          "read_excel",
-          "read_xlsx",
-          "write_csv",
-          "write_parquet",
-          "write_json"
-        ]
-        
-        # COPY TO/FROMコマンドもチェック
-        copy_command = String.match?(sql, ~r/COPY\s+.+\s+(TO|FROM)\s+\$/i)
-        
-        file_function = Enum.any?(file_functions, fn func ->
-          String.contains?(sql, func <> "(")
-        end)
-        
-        copy_command or file_function
-      end
-      
-      # ファイルパラメータを置換
-      defp replace_file_parameters(sql, params) do
-        params
-        |> Enum.with_index(1)
-        |> Enum.reduce(sql, fn {value, idx}, acc ->
-          # 文字列値を適切にクォート
-          quoted_value = quote_value(value)
-          String.replace(acc, "$#{idx}", quoted_value)
-        end)
-      end
       
       # 値をSQL用にクォート
       defp quote_value(nil), do: "NULL"
