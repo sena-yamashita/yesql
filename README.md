@@ -122,6 +122,66 @@ defmodule Analytics do
 end
 ```
 
+#### DuckDB詳細例：時系列分析
+
+```sql
+-- analytics/time_series_analysis.sql
+-- name: time_series_analysis
+WITH daily_stats AS (
+  SELECT 
+    DATE_TRUNC('day', created_at) as day,
+    COUNT(*) as daily_count,
+    SUM(amount) as daily_revenue,
+    AVG(amount) as avg_order_value
+  FROM orders
+  WHERE created_at BETWEEN :start_date AND :end_date
+    AND status = :status
+  GROUP BY DATE_TRUNC('day', created_at)
+),
+moving_averages AS (
+  SELECT 
+    day,
+    daily_count,
+    daily_revenue,
+    avg_order_value,
+    AVG(daily_revenue) OVER (
+      ORDER BY day 
+      ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) as revenue_7day_ma
+  FROM daily_stats
+)
+SELECT * FROM moving_averages
+ORDER BY day;
+```
+
+```elixir
+# DuckDBの高度な分析機能を活用
+defmodule MyApp.Analytics do
+  use Yesql, driver: :duckdb
+  
+  # SQLファイルを読み込み
+  Yesql.defquery("analytics/time_series_analysis.sql")
+  
+  def analyze_sales_trends(conn, date_range) do
+    {:ok, results} = time_series_analysis(conn,
+      start_date: date_range.start,
+      end_date: date_range.end,
+      status: "completed"
+    )
+    
+    # 結果を処理してグラフ用のデータに変換
+    Enum.map(results, fn row ->
+      %{
+        date: row.day,
+        revenue: row.daily_revenue,
+        trend: row.revenue_7day_ma,
+        orders: row.daily_count
+      }
+    end)
+  end
+end
+```
+
 ### MySQL/MariaDBでの使用
 
 ```elixir
@@ -141,6 +201,65 @@ defmodule MyApp.Queries do
   
   # 使用する（MySQLは?形式のパラメータを使用）
   MyApp.Queries.get_users(conn, status: "active", limit: 10)
+end
+```
+
+#### MySQL詳細例：全文検索とJSON操作
+
+```sql
+-- queries/search_products.sql
+-- name: search_products
+SELECT 
+  p.id,
+  p.name,
+  p.description,
+  p.price,
+  JSON_EXTRACT(p.attributes, '$.color') as color,
+  JSON_EXTRACT(p.attributes, '$.size') as size,
+  MATCH(p.name, p.description) AGAINST(:search_term IN NATURAL LANGUAGE MODE) as relevance
+FROM products p
+WHERE 
+  p.status = :status
+  AND p.price BETWEEN :min_price AND :max_price
+  AND (
+    MATCH(p.name, p.description) AGAINST(:search_term IN NATURAL LANGUAGE MODE)
+    OR p.name LIKE :search_pattern
+  )
+ORDER BY relevance DESC, p.created_at DESC
+LIMIT :limit;
+```
+
+```elixir
+# MySQLの全文検索とJSON機能を活用
+defmodule MyApp.ProductSearch do
+  use Yesql, driver: :mysql
+  
+  Yesql.defquery("queries/search_products.sql")
+  
+  def search(conn, term, filters \\ %{}) do
+    {:ok, products} = search_products(conn,
+      search_term: term,
+      search_pattern: "%#{term}%",
+      status: filters[:status] || "active",
+      min_price: filters[:min_price] || 0,
+      max_price: filters[:max_price] || 999999,
+      limit: filters[:limit] || 20
+    )
+    
+    # 結果を整形
+    Enum.map(products, fn product ->
+      %{
+        id: product.id,
+        name: product.name,
+        price: Decimal.to_float(product.price),
+        attributes: %{
+          color: product.color,
+          size: product.size
+        },
+        relevance_score: product.relevance
+      }
+    end)
+  end
 end
 ```
 
@@ -200,6 +319,41 @@ end
 createdb yesql_test
 mix deps.get
 mix test
+```
+
+### ドライバー別テスト
+
+各ドライバーは環境変数で有効化します：
+
+```sh
+# PostgreSQLテスト（デフォルト）
+mix test
+
+# DuckDBテスト
+DUCKDB_TEST=true mix test test/duckdb_test.exs
+
+# MySQLテスト
+MYSQL_TEST=true MYSQL_USER=root MYSQL_PASSWORD=password mix test test/mysql_test.exs
+
+# MSSQLテスト
+MSSQL_TEST=true MSSQL_PASSWORD="YourStrong!Passw0rd" mix test test/mssql_test.exs
+
+# Oracleテスト
+ORACLE_TEST=true ORACLE_PASSWORD=password mix test test/oracle_test.exs
+```
+
+### パフォーマンステスト
+
+YesQLの抽象化レイヤーのオーバーヘッドを測定できます：
+
+```sh
+# ベンチマークの実行
+cd bench
+./run_benchmarks.sh all
+
+# 特定のドライバーのみ
+./run_benchmarks.sh postgresql
+./run_benchmarks.sh mysql
 ```
 
 

@@ -20,7 +20,8 @@
       "Bash(--notes-file RELEASE_NOTES_v2.0.0.md )",
       "Bash(--target master)",
       "Bash(mv:*)",
-      "WebFetch(domain:hex.pm)"
+      "WebFetch(domain:hex.pm)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

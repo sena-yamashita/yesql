@@ -28,8 +28,14 @@ defmodule Yesql.Mixfile do
       main: "readme",
       extras: [
         "README.md",
+        "CHANGELOG.md",
         "guides/ecto_configuration.md",
-        "guides/postgrex_configuration.md"
+        "guides/postgrex_configuration.md",
+        "guides/multi_driver_configuration.md",
+        "guides/mysql_configuration.md",
+        "guides/mssql_configuration.md",
+        "guides/oracle_configuration.md",
+        "guides/production_checklist.md"
       ],
       groups_for_extras: [
         Configuration: Path.wildcard("guides/*.md")
@@ -72,7 +78,9 @@ defmodule Yesql.Mixfile do
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},
       # Documentation generator
-      {:ex_doc, "~> 0.23", only: :dev}
+      {:ex_doc, "~> 0.23", only: :dev},
+      # Benchmarking
+      {:benchee, "~> 1.0", only: :bench, runtime: false}
     ]
   end
 end
