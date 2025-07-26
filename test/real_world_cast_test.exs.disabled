@@ -11,13 +11,13 @@ defmodule RealWorldCastTest do
       use Yesql, driver: Postgrex
       
       # JSONB検索クエリ
-      defquery "test/sql/real_world/pg_jsonb_search.sql"
+      Yesql.defquery("test/sql/real_world/pg_jsonb_search.sql")
       
       # 時系列データクエリ
-      defquery "test/sql/real_world/pg_timeseries.sql"
+      Yesql.defquery("test/sql/real_world/pg_timeseries.sql")
       
       # 配列操作クエリ
-      defquery "test/sql/real_world/pg_array_ops.sql"
+      Yesql.defquery("test/sql/real_world/pg_array_ops.sql")
     end
 
     setup do
@@ -116,7 +116,7 @@ defmodule RealWorldCastTest do
       use Yesql, driver: :duckdb
       
       # 分析クエリ
-      defquery "test/sql/real_world/duckdb_analytics.sql"
+      Yesql.defquery("test/sql/real_world/duckdb_analytics.sql")
     end
 
     setup do

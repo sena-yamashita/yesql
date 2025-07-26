@@ -1,4 +1,3 @@
--- name: search_products_by_arrays
 -- 配列フィールドでの複雑な検索（実使用例）
 SELECT 
   id,

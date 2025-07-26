@@ -1,4 +1,3 @@
--- name: test_cast_syntax
 -- SQLite CAST関数構文のテスト
 SELECT 
   id,
@@ -10,7 +9,6 @@ WHERE text_col = CAST(:text_value AS TEXT)
   AND int_col > CAST(:int_value AS INTEGER)
   AND real_col > CAST(:real_value AS REAL)
 
--- name: sqlite_type_affinity
 -- SQLiteの型親和性テスト
 SELECT 
   typeof(CAST(:value AS INTEGER)) as int_type,

@@ -1,1 +1,1 @@
-SELECT * FROM users WHERE id = CAST(:id AS integer)
+SELECT * FROM users WHERE id = :id

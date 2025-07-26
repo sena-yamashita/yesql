@@ -1,4 +1,3 @@
--- name: search_documents
 -- Full text search with ranking
 SELECT 
   id,
@@ -10,7 +9,6 @@ WHERE search_vector @@ query
 ORDER BY rank DESC
 LIMIT CAST(:limit AS integer);
 
--- name: search_with_weights
 -- Search with category filtering
 SELECT 
   id,

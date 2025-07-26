@@ -38,8 +38,8 @@ defmodule PostgreSQLYesqlTest do
     end
   end
 
-  @describetag :skip
   describe "Yesql PostgreSQL JSONB操作" do
+    @describetag :skip
     setup [:create_jsonb_test_table]
 
     test "JSONBタグ検索", %{postgrex: conn} do
@@ -101,8 +101,8 @@ defmodule PostgreSQLYesqlTest do
     end
   end
 
-  @describetag :skip
   describe "Yesql PostgreSQL 配列操作" do
+    @describetag :skip
     setup [:create_array_test_table]
 
     test "ANY演算子での検索", %{postgrex: conn} do
@@ -161,8 +161,8 @@ defmodule PostgreSQLYesqlTest do
     end
   end
 
-  @describetag :skip
   describe "Yesql PostgreSQL ウィンドウ関数" do
+    @describetag :skip
     setup [:create_sales_test_table]
 
     test "累積合計の計算", %{postgrex: conn} do
@@ -221,8 +221,8 @@ defmodule PostgreSQLYesqlTest do
     end
   end
 
-  @describetag :skip
   describe "Yesql PostgreSQL 再帰CTE" do
+    @describetag :skip
     setup [:create_hierarchy_test_table]
 
     test "階層構造の取得", %{postgrex: conn} do
@@ -269,8 +269,8 @@ defmodule PostgreSQLYesqlTest do
     end
   end
 
-  @describetag :skip
   describe "Yesql PostgreSQL 全文検索" do
+    @describetag :skip
     setup [:create_fulltext_test_table]
 
     test "基本的な全文検索", %{postgrex: conn} do

@@ -1,4 +1,3 @@
--- name: test_cast_syntax
 -- MSSQL CAST/CONVERT構文のテスト
 SELECT 
   id,
@@ -10,7 +9,6 @@ WHERE text_col = CAST(:text_value AS NVARCHAR(255))
   AND int_col > CAST(:int_value AS INT)
   AND date_col = CAST(:date_value AS DATE)
 
--- name: mssql_convert_test
 -- MSSQL CONVERT関数のテスト（スタイル付き）
 SELECT 
   CONVERT(INT, :text_value) as converted_int,

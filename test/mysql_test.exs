@@ -33,11 +33,11 @@ defmodule YesqlMySQLTest do
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      MyXQL.query!(context[:conn], "TRUNCATE TABLE users", [])
+      MyXQL.query!(context[:conn], "TRUNCATE TABLE users")
       
       # テストデータを挿入
       MyXQL.query!(context[:conn], 
-        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)", [])
+        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)")
     end
     
     :ok
@@ -92,7 +92,7 @@ defmodule YesqlMySQLTest do
   # テストデータベースのセットアップ
   defp setup_database(conn) do
     # テーブルが存在する場合は削除
-    MyXQL.query(conn, "DROP TABLE IF EXISTS users")
+    MyXQL.query!(conn, "DROP TABLE IF EXISTS users")
     
     # テーブル作成
     MyXQL.query!(conn, """

@@ -1,4 +1,3 @@
--- name: aggregate_timeseries
 -- 時系列データの集計（実使用例）
 WITH time_buckets AS (
   SELECT 

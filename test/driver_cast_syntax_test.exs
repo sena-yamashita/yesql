@@ -60,7 +60,7 @@ defmodule DriverCastSyntaxTest do
       """, [])
 
       # Yesqlクエリの実行（::キャスト使用）
-      {:ok, results} = PostgresQuery.test_cast_syntax(conn, 
+      {:ok, results} = PostgresQuery.postgres_cast(conn, 
         text_value: "789",
         int_value: 100,
         jsonb_value: %{"test" => true},
@@ -131,7 +131,7 @@ defmodule DriverCastSyntaxTest do
     @tag :mysql
     test "MySQLのCAST関数", %{mysql: conn} do
       # MySQLはCAST関数を使用
-      {:ok, results} = MySQLQuery.test_cast_syntax(conn,
+      {:ok, results} = MySQLQuery.mysql_cast(conn,
         text_value: "123",
         int_value: 456,
         date_value: ~D[2024-01-01]
@@ -155,7 +155,7 @@ defmodule DriverCastSyntaxTest do
     @tag :sqlite
     test "SQLiteのCAST関数", %{sqlite: conn} do
       # SQLiteもCAST関数を使用
-      {:ok, results} = SQLiteQuery.test_cast_syntax(conn,
+      {:ok, results} = SQLiteQuery.sqlite_cast(conn,
         text_value: "123",
         int_value: 456,
         real_value: 123.45
@@ -179,7 +179,7 @@ defmodule DriverCastSyntaxTest do
     @tag :mssql
     test "MSSQLのCAST/CONVERT", %{mssql: conn} do
       # MSSQLはCASTとCONVERTの両方をサポート
-      {:ok, results} = MSSQLQuery.test_cast_syntax(conn,
+      {:ok, results} = MSSQLQuery.mssql_cast(conn,
         text_value: "123",
         int_value: 456,
         date_value: ~D[2024-01-01]
@@ -203,7 +203,7 @@ defmodule DriverCastSyntaxTest do
     @tag :oracle
     test "OracleのCAST関数", %{oracle: conn} do
       # OracleはCAST関数を使用
-      {:ok, results} = OracleQuery.test_cast_syntax(conn,
+      {:ok, results} = OracleQuery.oracle_cast(conn,
         text_value: "123",
         int_value: 456,
         date_value: ~D[2024-01-01]

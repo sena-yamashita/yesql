@@ -1,4 +1,3 @@
--- name: sales_with_running_total
 -- Get sales with running total using window functions
 SELECT 
   product,
@@ -9,7 +8,6 @@ FROM sales
 WHERE sale_date BETWEEN CAST(:start_date AS date) AND CAST(:end_date AS date)
 ORDER BY product, sale_date;
 
--- name: rank_products_by_sales
 -- Rank products by total sales
 SELECT 
   product,

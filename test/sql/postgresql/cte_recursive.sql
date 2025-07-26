@@ -1,4 +1,3 @@
--- name: get_hierarchy_tree
 -- Get full hierarchy tree with levels
 WITH RECURSIVE tree AS (
   SELECT 
@@ -25,7 +24,6 @@ SELECT id, name, parent_id, level, full_path
 FROM tree
 ORDER BY level, name;
 
--- name: calculate_subtree_aggregates
 -- Calculate aggregates for a subtree
 WITH RECURSIVE subtree AS (
   SELECT id, name, parent_id, value

@@ -1,4 +1,3 @@
--- name: analyze_sales
 -- DuckDBでの売上分析クエリ（実使用例）
 WITH monthly_sales AS (
   SELECT 

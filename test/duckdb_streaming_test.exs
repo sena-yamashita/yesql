@@ -2,8 +2,8 @@ defmodule DuckDBStreamingTest do
   use ExUnit.Case
 
   # DuckDBが利用可能な場合のみテストを実行
-  @tag :skip_on_ci
-  @tag :duckdb
+  @moduletag :skip_on_ci
+  @moduletag :duckdb
   @moduletag :streaming
 
   setup_all do

@@ -1,4 +1,3 @@
--- name: test_cast_syntax
 -- Oracle CAST関数構文のテスト
 SELECT 
   id,
@@ -10,7 +9,6 @@ WHERE text_col = CAST(:text_value AS VARCHAR2(255))
   AND int_col > CAST(:int_value AS NUMBER)
   AND date_col = CAST(:date_value AS DATE)
 
--- name: oracle_conversion_functions
 -- Oracle変換関数のテスト
 SELECT 
   TO_NUMBER(:text_value) as to_number_val,

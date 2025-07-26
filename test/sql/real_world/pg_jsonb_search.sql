@@ -1,4 +1,3 @@
--- name: search_users_by_jsonb
 -- 複雑なJSONB検索クエリ（実使用例）
 SELECT 
   id,

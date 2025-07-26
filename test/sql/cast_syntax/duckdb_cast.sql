@@ -1,4 +1,3 @@
--- name: test_cast_syntax
 -- DuckDB :: キャスト構文のテスト（PostgreSQL互換）
 SELECT 
   id,
@@ -9,7 +8,6 @@ FROM cast_test
 WHERE text_col = :text_value::VARCHAR
   AND int_col > :int_value::INTEGER
 
--- name: duckdb_specific_casts
 -- DuckDB特有のキャスト
 SELECT 
   :date::DATE as date_val,

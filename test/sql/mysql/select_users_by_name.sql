@@ -1,4 +1,3 @@
--- name: select_users_by_name
 -- MySQLでユーザーを名前で検索
 SELECT id, name, age 
 FROM users 
