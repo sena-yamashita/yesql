@@ -52,7 +52,8 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs:58 --trace)",
-      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --only streaming)"
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --only streaming)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

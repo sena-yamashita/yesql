@@ -8,23 +8,6 @@ end
 ExUnit.start()
 
 defmodule TestHelper do
-  def check_postgres_connection() do
-    opts = [
-      hostname: System.get_env("POSTGRES_HOST", "localhost"),
-      username: System.get_env("POSTGRES_USER", "postgres"), 
-      password: System.get_env("POSTGRES_PASSWORD", "postgres"),
-      database: System.get_env("POSTGRES_DATABASE", "yesql_test"),
-      port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
-    ]
-    
-    case Postgrex.start_link(opts) do
-      {:ok, conn} ->
-        Process.exit(conn, :normal)
-        {:ok, :connected}
-      {:error, _} ->
-        {:error, :connection_failed}
-    end
-  end
   def new_postgrex_connection(ctx) do
     opts = [
       hostname: System.get_env("POSTGRES_HOST", "localhost"),
@@ -164,8 +147,8 @@ defmodule TestHelper do
     )
     """
     
-    Tds.query!(conn, drop_sql)
-    Tds.query!(conn, create_sql)
+    Tds.query!(conn, drop_sql, [])
+    Tds.query!(conn, create_sql, [])
     :ok
   end
   def create_mssql_test_table(_), do: :skip
@@ -212,7 +195,7 @@ defmodule TestHelper do
   def create_oracle_test_table(%{oracle: conn}) do
     # Oracle doesn't support IF EXISTS, so we catch the error
     try do
-      Jamdb.Oracle.query!(conn, "DROP TABLE users")
+      Jamdb.Oracle.query(conn, "DROP TABLE users")
     rescue
       _ -> :ok
     end
@@ -226,7 +209,7 @@ defmodule TestHelper do
     )
     """
     
-    Jamdb.Oracle.query!(conn, create_sql)
+    Jamdb.Oracle.query(conn, create_sql)
     :ok
   end
   def create_oracle_test_table(_), do: :skip

@@ -1,23 +1,21 @@
 -- name: sales_with_running_total
--- 売上の累積合計を計算
+-- Get sales with running total using window functions
 SELECT 
-  id,
   product,
   amount,
   sale_date,
-  SUM(amount) OVER (PARTITION BY product ORDER BY sale_date) as running_total,
-  ROW_NUMBER() OVER (PARTITION BY product ORDER BY sale_date) as row_num
+  SUM(amount) OVER (PARTITION BY product ORDER BY sale_date) as running_total
 FROM sales
-WHERE sale_date BETWEEN :start_date AND :end_date
-ORDER BY product, sale_date
+WHERE sale_date BETWEEN CAST(:start_date AS date) AND CAST(:end_date AS date)
+ORDER BY product, sale_date;
 
 -- name: rank_products_by_sales
--- 製品を売上でランク付け
+-- Rank products by total sales
 SELECT 
   product,
   SUM(amount) as total_sales,
-  RANK() OVER (ORDER BY SUM(amount) DESC) as sales_rank,
-  PERCENT_RANK() OVER (ORDER BY SUM(amount) DESC) as percentile
+  RANK() OVER (ORDER BY SUM(amount) DESC) as sales_rank
 FROM sales
-WHERE sale_date >= :since
+WHERE sale_date >= CAST(:since AS date)
 GROUP BY product
+ORDER BY sales_rank;

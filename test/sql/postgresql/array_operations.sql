@@ -1,18 +1,20 @@
 -- name: find_by_any_tag
--- 配列内のいずれかのタグを持つレコードを検索
+-- Find items that have any of the specified tags
 SELECT id, name, tags
 FROM items
-WHERE :tag = ANY(tags)
+WHERE CAST(:tag AS text) = ANY(tags)
+ORDER BY id;
 
 -- name: find_by_overlapping_tags
--- 指定タグと重複するタグを持つレコードを検索
+-- Find items with overlapping tags
 SELECT id, name, tags
 FROM items
-WHERE tags && :tags
+WHERE tags && CAST(:tags AS text[])
+ORDER BY id;
 
 -- name: add_tags_to_item
--- アイテムにタグを追加
+-- Add new tags to an item
 UPDATE items
-SET tags = array_cat(tags, :new_tags)
-WHERE id = :id
-RETURNING *
+SET tags = array_cat(tags, CAST(:new_tags AS text[]))
+WHERE id = CAST(:id AS integer)
+RETURNING id, name, tags;

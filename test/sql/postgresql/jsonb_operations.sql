@@ -1,18 +1,20 @@
 -- name: find_users_by_tag
--- JSONB配列内のタグで検索
+-- Find users that have a specific tag in their JSONB data
 SELECT id, data
 FROM users
-WHERE data->'tags' @> :tag::jsonb
+WHERE data->'tags' @> CAST(:tag AS jsonb)
+ORDER BY id;
 
 -- name: find_users_by_attributes
--- JSONB属性で検索
+-- Find users by JSONB attributes
 SELECT id, data
 FROM users
-WHERE data @> :attributes
+WHERE data @> CAST(:attributes AS jsonb)
+ORDER BY id;
 
 -- name: update_user_data
--- JSONB データの更新
+-- Update user JSONB data while preserving existing fields
 UPDATE users
-SET data = data || :new_data
-WHERE id = :id
-RETURNING *
+SET data = data || CAST(:new_data AS jsonb)
+WHERE id = CAST(:id AS integer)
+RETURNING id, data;
