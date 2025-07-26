@@ -19,7 +19,8 @@ defmodule Yesql.Mixfile do
         licenses: ["Apache 2.0"],
         links: %{"GitHub" => "https://github.com/lpil/yesql"},
         files: ~w(LICENCE README.md lib src mix.exs)
-      ]
+      ],
+      aliases: aliases()
     ]
   end
 
@@ -51,9 +52,46 @@ defmodule Yesql.Mixfile do
       extra_applications: [:logger]
     ]
   end
+  
+  def cli do
+    [
+      preferred_envs: [
+        "test.unit": :test,
+        "test.full": :test,
+        "test.ci": :test,
+        "test.postgres": :test,
+        "test.mysql": :test,
+        "test.mssql": :test,
+        "test.duckdb": :test,
+        "test.watch.unit": :test
+      ]
+    ]
+  end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+  
+  defp aliases do
+    [
+      # ローカル開発用: 単体テストのみ実行（高速）
+      "test.unit": ["test --only unit"],
+      
+      # 全テスト実行（DB接続必要）
+      "test.full": ["cmd FULL_TEST=true mix test"],
+      
+      # CI用フルテスト
+      "test.ci": ["cmd CI=true mix test"],
+      
+      # 各DBごとのテスト
+      "test.postgres": ["cmd FULL_TEST=true mix test --only postgres"],
+      "test.mysql": ["cmd FULL_TEST=true MYSQL_TEST=true mix test --only mysql"],
+      "test.mssql": ["cmd FULL_TEST=true MSSQL_TEST=true mix test --only mssql"],
+      "test.duckdb": ["cmd FULL_TEST=true DUCKDB_TEST=true mix test --only duckdb"],
+      
+      # Watch mode for unit tests
+      "test.watch.unit": ["test.watch --only unit"]
+    ]
+  end
 
   defp deps do
     [

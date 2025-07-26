@@ -2,6 +2,9 @@ defmodule YesqlTest do
   use ExUnit.Case
   doctest Yesql
   import TestHelper
+  
+  @moduletag :integration
+  @moduletag :db_required
 
   defmodule Query do
     use Yesql, driver: Postgrex

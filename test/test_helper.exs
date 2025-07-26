@@ -9,7 +9,15 @@ if System.get_env("DUCKDB_TEST") == "true" do
   {:ok, _} = Application.ensure_all_started(:duckdbex)
 end
 
-ExUnit.start()
+# CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
+if System.get_env("CI") || System.get_env("FULL_TEST") do
+  ExUnit.start()
+else
+  # ローカル環境では単体テストのみ実行
+  ExUnit.start(exclude: [:integration, :db_required])
+  IO.puts("\n📝 ローカルモード: 単体テストのみ実行")
+  IO.puts("   全テストを実行するには: FULL_TEST=true mix test\n")
+end
 
 defmodule TestHelper do
   def new_postgrex_connection(ctx) do

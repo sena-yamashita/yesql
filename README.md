@@ -495,32 +495,48 @@ mix compile
 
 ## テスト
 
+### テストモード
+
+YesQLは2つのテストモードをサポートしています：
+
+1. **ローカルモード（デフォルト）** - DB接続不要な単体テストのみ実行
+2. **フルテストモード** - 全てのテスト（DB接続必要）を実行
+
 ### 基本的なテスト実行
 
 ```sh
-# PostgreSQL用のテストデータベースを作成
-createdb yesql_test
-
-# テスト実行
+# ローカルモード（単体テストのみ・高速）
 mix test
+
+# 単体テストのみを明示的に実行
+mix test.unit
+
+# フルテスト（DB接続必要）
+mix test.full
+
+# CI環境と同じ設定でテスト
+mix test.ci
 ```
 
 ### ドライバー別テスト
 
-各ドライバーは環境変数で有効化します：
+各ドライバー個別のテスト実行：
 
 ```sh
-# PostgreSQLテスト（デフォルト）
-mix test
+# PostgreSQL用のテストデータベースを作成（初回のみ）
+createdb yesql_test
+
+# PostgreSQLテスト
+mix test.postgres
 
 # DuckDBテスト
-DUCKDB_TEST=true mix test test/duckdb_test.exs
+mix test.duckdb
 
 # MySQLテスト
-MYSQL_TEST=true MYSQL_USER=root MYSQL_PASSWORD=password mix test test/mysql_test.exs
+mix test.mysql
 
 # MSSQLテスト
-MSSQL_TEST=true MSSQL_PASSWORD="YourStrong!Passw0rd" mix test test/mssql_test.exs
+mix test.mssql
 
 # Oracleテスト
 ORACLE_TEST=true ORACLE_PASSWORD=password mix test test/oracle_test.exs

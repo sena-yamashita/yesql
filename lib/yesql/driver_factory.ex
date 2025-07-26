@@ -15,7 +15,18 @@ defmodule Yesql.DriverFactory do
   - `{:error, :driver_not_loaded}` - ドライバーが読み込まれていない場合
   """
   def create(driver_name) do
-    case driver_name do
+    # モジュール名をアトムに変換
+    normalized_name = case driver_name do
+      Postgrex -> :postgrex
+      Ecto -> :ecto
+      Duckdbex -> :duckdb
+      MyXQL -> :mysql
+      Tds -> :mssql
+      atom when is_atom(atom) -> atom
+      _ -> driver_name
+    end
+    
+    case normalized_name do
       :postgrex ->
         if match?({:module, _}, Code.ensure_compiled(Postgrex)) do
           {:ok, %Yesql.Driver.Postgrex{}}
