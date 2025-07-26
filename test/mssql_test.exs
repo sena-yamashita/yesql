@@ -36,7 +36,7 @@ defmodule YesqlMSSQLTest do
         
       _ ->
         IO.puts "MSSQLテストをスキップします。実行するには MSSQL_TEST=true を設定してください。"
-        :skip
+        {:ok, %{}}
     end
   end
   

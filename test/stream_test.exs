@@ -90,7 +90,7 @@ defmodule StreamTest do
     end
     
     if connections == %{} do
-      :skip
+      {:ok, %{}}
     else
       [connections: connections]
     end
@@ -136,7 +136,7 @@ defmodule StreamTest do
         
         # チャンクごとに処理されることを確認
         chunk_sizes = stream
-        |> Stream.chunk_every(10)
+        |> Enum.chunk_every(10)
         |> Enum.map(&length/1)
         
         assert Enum.all?(chunk_sizes, &(&1 <= 10))

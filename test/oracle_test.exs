@@ -38,7 +38,7 @@ defmodule YesqlOracleTest do
         
       _ ->
         IO.puts "Oracleテストをスキップします。実行するには ORACLE_TEST=true を設定してください。"
-        :skip
+        {:ok, %{}}
     end
   end
   

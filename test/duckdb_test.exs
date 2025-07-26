@@ -1,6 +1,5 @@
 defmodule DuckDBTest do
   use ExUnit.Case
-  import TestHelper
 
   # DuckDBが利用可能な場合のみテストを実行
   @moduletag :skip_on_ci
@@ -48,7 +47,7 @@ defmodule DuckDBTest do
         {:ok, conn: conn, db: db}
         
       _ ->
-        :skip
+        {:ok, %{}}
     end
   end
 

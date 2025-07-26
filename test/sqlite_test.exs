@@ -97,7 +97,7 @@ defmodule SQLiteTest do
         [conn: conn]
       
       _ ->
-        :skip
+        {:ok, %{}}
     end
   end
   

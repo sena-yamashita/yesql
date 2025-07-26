@@ -50,7 +50,7 @@ defmodule DuckDBStreamingTest do
         {:ok, conn: conn, db: db}
         
       _ ->
-        :skip
+        {:ok, %{}}
     end
   end
 
