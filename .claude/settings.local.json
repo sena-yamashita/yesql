@@ -62,7 +62,9 @@
       "Bash(sed:*)",
       "Bash(done)",
       "Bash(CI=true mix test --exclude duckdb)",
-      "Bash(export CI=true)"
+      "Bash(export CI=true)",
+      "Bash(git restore:*)",
+      "Bash(mix dialyzer:*)"
     ],
     "deny": []
   }

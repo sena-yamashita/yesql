@@ -10,6 +10,7 @@ defmodule Yesql.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:leex] ++ Mix.compilers(),
       deps: deps(),
+      dialyzer: dialyzer(),
       name: "Yesql",
       description: "Using plain old SQL to query databases",
       source_url: "https://github.com/lpil/yesql",
@@ -71,6 +72,23 @@ defmodule Yesql.Mixfile do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
   
+  defp dialyzer do
+    [
+      plt_core_path: "priv/plts",
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+      flags: [
+        :error_handling,
+        :no_opaque,
+        :unmatched_returns
+      ],
+      # オプショナルな依存関係は除外
+      plt_add_deps: :apps_direct,
+      plt_add_apps: [:postgrex, :ecto, :ecto_sql],
+      # 既知の警告を無視
+      ignore_warnings: "dialyzer_ignore.exs"
+    ]
+  end
+  
   defp aliases do
     [
       # ローカル開発用: 単体テストのみ実行（高速）
@@ -111,10 +129,13 @@ defmodule Yesql.Mixfile do
       # SQLite driver
       {:exqlite, "~> 0.13", optional: true},
 
+      # Development dependencies
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},
       # Documentation generator
       {:ex_doc, "~> 0.23", only: :dev},
+      # Static analysis tool
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       # Benchmarking
       {:benchee, "~> 1.0", only: :bench, runtime: false}
     ]
