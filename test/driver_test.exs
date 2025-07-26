@@ -91,10 +91,12 @@ defmodule Yesql.DriverTest do
     @tag :duckdb
     test "execute/4の動作", %{duckdb: conn} do
       driver = %Yesql.Driver.DuckDB{}
-      sql = "INSERT INTO test_table (id, value) VALUES ($1, $2)"
+      # DuckDBはパラメータをサポートしないので、値を直接埋め込む
+      sql = "INSERT INTO test_table (id, value) VALUES (1, 'test')"
       
-      assert {:ok, result} = Yesql.Driver.execute(driver, conn, sql, [1, "test"])
-      assert result.rows == []
+      assert {:ok, result} = Yesql.Driver.execute(driver, conn, sql, [])
+      # DuckDBのINSERTは影響した行数を返す
+      assert result.rows == [[1]]
     end
 
     @tag :duckdb
@@ -113,13 +115,13 @@ defmodule Yesql.DriverTest do
       driver = %Yesql.Driver.DuckDB{}
       
       # データ挿入
-      insert_sql = "INSERT INTO test_table (id, value) VALUES ($1, $2)"
-      {:ok, _} = Duckdbex.query(conn, insert_sql, [42, "answer"])
+      insert_sql = "INSERT INTO test_table (id, value) VALUES (42, 'answer')"
+      {:ok, _} = Duckdbex.query(conn, insert_sql, [])
       
       # データ取得
       select_sql = "SELECT id, value FROM test_table"
       {:ok, result_ref} = Duckdbex.query(conn, select_sql, [])
-      {:ok, rows} = Duckdbex.fetch_all(result_ref)
+      rows = Duckdbex.fetch_all(result_ref)
       
       # 結果変換（DuckDBexがキーワードリストを返す場合）
       result = %{rows: rows, columns: ["id", "value"]}

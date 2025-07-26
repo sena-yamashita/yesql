@@ -128,6 +128,9 @@ defmodule Yesql.Mixfile do
       {:jamdb_oracle, "~> 0.5", optional: true},
       # SQLite driver
       {:exqlite, "~> 0.13", optional: true},
+      
+      # JSON encoder/decoder (required by Postgrex for jsonb types)
+      {:jason, "~> 1.0", optional: true},
 
       # Parser generator
       {:nimble_parsec, "~> 1.4", runtime: false},

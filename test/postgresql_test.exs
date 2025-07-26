@@ -71,8 +71,8 @@ defmodule PostgreSQLTest do
     end
 
     test "UUID型のサポート", %{postgrex: conn} do
-      uuid1 = "550e8400-e29b-41d4-a716-446655440000"
-      uuid2 = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+      uuid1 = Ecto.UUID.dump!("550e8400-e29b-41d4-a716-446655440000")
+      uuid2 = Ecto.UUID.dump!("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
       # UUIDの挿入
       {:ok, _} = Postgrex.query(conn, """
