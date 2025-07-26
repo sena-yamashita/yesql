@@ -8,6 +8,22 @@ end
 ExUnit.start()
 
 defmodule TestHelper do
+  def check_postgres_connection() do
+    opts = [
+      hostname: "localhost",
+      username: "postgres", 
+      password: "postgres",
+      database: "yesql_test"
+    ]
+    
+    case Postgrex.start_link(opts) do
+      {:ok, conn} ->
+        Process.exit(conn, :normal)
+        {:ok, :connected}
+      {:error, _} ->
+        {:error, :connection_failed}
+    end
+  end
   def new_postgrex_connection(ctx) do
     opts = [
       hostname: "localhost",
@@ -17,8 +33,12 @@ defmodule TestHelper do
       name: Module.concat(ctx.module, Postgrex)
     ]
 
-    {:ok, conn} = Postgrex.start_link(opts)
-    {:ok, postgrex: conn}
+    case Postgrex.start_link(opts) do
+      {:ok, conn} -> 
+        {:ok, postgrex: conn}
+      {:error, _} ->
+        {:error, :connection_failed}
+    end
   end
 
   def create_cats_postgres_table(ctx) do
