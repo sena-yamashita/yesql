@@ -43,7 +43,7 @@ defmodule YesqlMSSQLTest do
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      Tds.query!(context[:conn], "TRUNCATE TABLE users")
+      Tds.query!(context[:conn], "TRUNCATE TABLE users", [])
       
       # テストデータを挿入
       Tds.query!(context[:conn], 
@@ -76,7 +76,7 @@ defmodule YesqlMSSQLTest do
       assert result.num_rows == 1
       
       # 挿入されたことを確認
-      %{rows: [[count]]} = Tds.query!(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'")
+      %{rows: [[count]]} = Tds.query!(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'", [])
       assert count == 1
     end
     
@@ -113,7 +113,7 @@ defmodule YesqlMSSQLTest do
   defp setup_database(conn) do
     # テーブルが存在する場合は削除
     try do
-      Tds.query!(conn, "DROP TABLE users")
+      Tds.query!(conn, "DROP TABLE users", [])
     rescue
       _ -> :ok
     end

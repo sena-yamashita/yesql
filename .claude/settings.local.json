@@ -48,7 +48,9 @@
       "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --max-cases 1)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs:59 --trace)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs:59 --no-compile)",
-      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --no-compile)"
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --no-compile)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": []
   }

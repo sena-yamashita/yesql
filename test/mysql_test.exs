@@ -35,18 +35,18 @@ defmodule YesqlMySQLTest do
         
       _ ->
         IO.puts "MySQLテストをスキップします。実行するには MYSQL_TEST=true を設定してください。"
-        :skip
+        {:ok, %{}}
     end
   end
   
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      MyXQL.query!(context[:conn], "TRUNCATE TABLE users")
+      MyXQL.query!(context[:conn], "TRUNCATE TABLE users", [])
       
       # テストデータを挿入
       MyXQL.query!(context[:conn], 
-        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)")
+        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)", [])
     end
     
     :ok

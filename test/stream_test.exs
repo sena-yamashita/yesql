@@ -297,16 +297,16 @@ defmodule StreamTest do
     test "SQLite: FTS5ストリーミング", %{connections: connections} do
       if conn = connections[:sqlite] do
         # FTSテーブルを作成
-        Exqlite.Sqlite3.execute!(conn, """
+        Exqlite.Sqlite3.execute(conn, """
         CREATE VIRTUAL TABLE documents USING fts5(content)
         """)
         
         # テストデータ挿入
         Enum.each(1..100, fn i ->
-          Exqlite.Sqlite3.execute!(conn, 
-            "INSERT INTO documents VALUES (?)",
-            ["Document number #{i} contains searchable text"]
-          )
+          {:ok, stmt} = Exqlite.Sqlite3.prepare(conn, "INSERT INTO documents VALUES (?)")
+          Exqlite.Sqlite3.bind(stmt, ["Document number #{i} contains searchable text"])
+          Exqlite.Sqlite3.step(conn, stmt)
+          Exqlite.Sqlite3.release(conn, stmt)
         end)
         
         alias Yesql.Stream.SQLiteStream
@@ -402,7 +402,7 @@ defmodule StreamTest do
   end
   
   defp setup_sqlite(conn) do
-    Exqlite.Sqlite3.execute!(conn, """
+    Exqlite.Sqlite3.execute(conn, """
     CREATE TABLE stream_test (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       value INTEGER,
@@ -457,20 +457,20 @@ defmodule StreamTest do
   end
   
   defp insert_test_data_sqlite(conn, count) do
-    Exqlite.Sqlite3.execute!(conn, "BEGIN")
+    Exqlite.Sqlite3.execute(conn, "BEGIN")
     
     {:ok, statement} = Exqlite.Sqlite3.prepare(conn,
       "INSERT INTO stream_test (value, data) VALUES (?, ?)"
     )
     
     Enum.each(1..count, fn i ->
-      Exqlite.Sqlite3.bind(conn, statement, [i, "Data for row #{i}"])
+      Exqlite.Sqlite3.bind(statement, [i, "Data for row #{i}"])
       Exqlite.Sqlite3.step!(conn, statement)
       Exqlite.Sqlite3.reset!(conn, statement)
     end)
     
     Exqlite.Sqlite3.release(conn, statement)
-    Exqlite.Sqlite3.execute!(conn, "COMMIT")
+    Exqlite.Sqlite3.execute(conn, "COMMIT")
   end
   
   defp insert_test_data_duckdb(conn, count) do

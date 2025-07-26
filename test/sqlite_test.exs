@@ -35,12 +35,12 @@ defmodule SQLiteTest do
         
         # テストデータ挿入
         {:ok, statement} = Exqlite.Sqlite3.prepare(conn, "INSERT INTO users (name, age, email) VALUES (?, ?, ?)")
-        :ok = Exqlite.Sqlite3.bind(conn, statement, ["Alice", 25, "alice@example.com"])
+        :ok = Exqlite.Sqlite3.bind(statement, ["Alice", 25, "alice@example.com"])
         :done = Exqlite.Sqlite3.step(conn, statement)
         :ok = Exqlite.Sqlite3.release(conn, statement)
         
         {:ok, statement} = Exqlite.Sqlite3.prepare(conn, "INSERT INTO users (name, age, email) VALUES (?, ?, ?)")
-        :ok = Exqlite.Sqlite3.bind(conn, statement, ["Bob", 30, "bob@example.com"])
+        :ok = Exqlite.Sqlite3.bind(statement, ["Bob", 30, "bob@example.com"])
         :done = Exqlite.Sqlite3.step(conn, statement)
         :ok = Exqlite.Sqlite3.release(conn, statement)
         
@@ -190,12 +190,12 @@ defmodule SQLiteTest do
       {:ok, statement} = Exqlite.Sqlite3.prepare(conn, insert_post_sql)
       
       # Aliceに2つのポスト
-      :ok = Exqlite.Sqlite3.bind(conn, statement, [1, "Post 1", "Body 1"])
+      :ok = Exqlite.Sqlite3.bind(statement, [1, "Post 1", "Body 1"])
       :done = Exqlite.Sqlite3.step(conn, statement)
       :ok = Exqlite.Sqlite3.release(conn, statement)
       
       {:ok, statement} = Exqlite.Sqlite3.prepare(conn, insert_post_sql)
-      :ok = Exqlite.Sqlite3.bind(conn, statement, [1, "Post 2", "Body 2"])
+      :ok = Exqlite.Sqlite3.bind(statement, [1, "Post 2", "Body 2"])
       :done = Exqlite.Sqlite3.step(conn, statement)
       :ok = Exqlite.Sqlite3.release(conn, statement)
       
