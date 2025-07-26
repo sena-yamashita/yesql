@@ -175,29 +175,42 @@ if Code.ensure_loaded?(Duckdbex) do
   
   # プライベート関数
   
-  defp create_result_stream(result_ref, columns, chunk_size, _total_rows) do
-    # DuckDBexは一度に全データを返すため、fetch_allを使用してチャンク化
-    all_rows = Duckdbex.fetch_all(result_ref)
+  defp create_result_stream(result_ref, columns, _chunk_size, _total_rows) do
+    # カラム名は既にアトムとして渡されている
     
-    # アトムキーのカラム名
-    atom_columns = Enum.map(columns, &String.to_atom/1)
-    
-    # 行をマップに変換してチャンク化
-    all_rows
-    |> Enum.map(fn row ->
-      atom_columns
-      |> Enum.zip(row)
-      |> Enum.into(%{})
-    end)
-    |> Stream.chunk_every(chunk_size)
-    |> Stream.flat_map(&Function.identity/1)
+    # Stream.resourceを使って真のストリーミングを実装
+    Stream.resource(
+      fn -> result_ref end,
+      fn result_ref ->
+        # DuckDBexから次のチャンクを取得
+        case Duckdbex.fetch_chunk(result_ref) do
+          [] -> 
+            {:halt, result_ref}
+          rows ->
+            # 行をマップに変換
+            mapped_rows = Enum.map(rows, fn row ->
+              columns
+              |> Enum.zip(row)
+              |> Enum.into(%{})
+            end)
+            
+            # チャンク全体を返す
+            {mapped_rows, result_ref}
+        end
+      end,
+      fn _result_ref -> :ok end
+    )
   end
   
   defp get_columns(result_ref) do
     # Duckdbex.columnsは直接カラム名のリストを返す
     case Duckdbex.columns(result_ref) do
       columns when is_list(columns) -> 
-        Enum.map(columns, &String.to_atom/1)
+        Enum.map(columns, fn
+          col when is_atom(col) -> col
+          col when is_binary(col) -> String.to_atom(col)
+          _ -> :unknown
+        end)
       _ -> 
         []
     end

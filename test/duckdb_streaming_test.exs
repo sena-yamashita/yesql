@@ -54,7 +54,6 @@ defmodule DuckDBStreamingTest do
     end
   end
 
-  @describetag :streaming
   describe "基本的なストリーミング" do
     test "シンプルなクエリのストリーミング", %{conn: conn} do
       sql = "SELECT * FROM streaming_test WHERE id < 100"
