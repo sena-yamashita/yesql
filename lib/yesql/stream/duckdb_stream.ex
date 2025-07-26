@@ -7,7 +7,6 @@ if Code.ensure_loaded?(Duckdbex) do
     ストリーミング処理します。
     """
     
-    alias Yesql.Driver
   
   @doc """
   DuckDB用のストリームを作成
@@ -27,7 +26,8 @@ if Code.ensure_loaded?(Duckdbex) do
       {:ok, result_ref} ->
         # 結果セットのメタデータを取得
         columns = get_columns(result_ref)
-        total_rows = get_row_count(result_ref)
+        # DuckDBexは行数を事前に取得できないため、:unknownを使用
+        total_rows = :unknown
         
         # ストリームを作成
         stream = create_result_stream(result_ref, columns, chunk_size, total_rows)
@@ -46,42 +46,11 @@ if Code.ensure_loaded?(Duckdbex) do
     end
   end
   
-  @doc """
-  Arrow形式でストリーミング
-  
-  DuckDBのArrowエクスポート機能を使用して、
-  高速なデータ転送を実現します。
-  """
-  def create_arrow_stream(conn, sql, params, opts \\ []) do
-    chunk_size = Keyword.get(opts, :chunk_size, 10000)
-    
-    # Arrow形式でエクスポート
-    case Duckdbex.query_arrow(conn, sql, params) do
-      {:ok, arrow_result} ->
-        # ArrowストリームをElixirストリームに変換
-        stream = Stream.resource(
-          fn -> {arrow_result, 0} end,
-          fn {result, offset} ->
-            case Duckdbex.fetch_arrow_chunk(result, offset, chunk_size) do
-              {:ok, chunk} when chunk != nil ->
-                # Arrowチャンクをマップのリストに変換
-                rows = decode_arrow_chunk(chunk)
-                {rows, {result, offset + length(rows)}}
-                
-              _ ->
-                {:halt, result}
-            end
-          end,
-          fn result ->
-            Duckdbex.close_arrow_result(result)
-          end
-        )
-        
-        {:ok, stream}
-        
-      error ->
-        error
-    end
+  # Arrow形式は現在のDuckDBexではサポートされていません
+  # 将来的な実装のためのプレースホルダー
+  @doc false
+  def create_arrow_stream(_conn, _sql, _params, _opts \\ []) do
+    {:error, "Arrow streaming is not supported in current DuckDBex version"}
   end
   
   @doc """
@@ -124,7 +93,7 @@ if Code.ensure_loaded?(Duckdbex) do
     materialize = Keyword.get(opts, :materialize, true)
     
     # 集約クエリを最適化
-    optimized_sql = if materialize do
+    _optimized_sql = if materialize do
       # 一時テーブルにマテリアライズ
       temp_table = "temp_stream_#{:erlang.unique_integer([:positive])}"
       create_sql = "CREATE TEMP TABLE #{temp_table} AS #{sql}"
@@ -170,7 +139,7 @@ if Code.ensure_loaded?(Duckdbex) do
   時系列データなどで、ウィンドウごとにデータを処理します。
   """
   def create_windowed_stream(conn, sql, params, window_column, window_size, opts \\ []) do
-    overlap = Keyword.get(opts, :overlap, 0)
+    _overlap = Keyword.get(opts, :overlap, 0)
     
     # ウィンドウクエリを生成
     windowed_sql = """
@@ -206,52 +175,34 @@ if Code.ensure_loaded?(Duckdbex) do
   
   # プライベート関数
   
-  defp create_result_stream(result_ref, columns, chunk_size, total_rows) do
-    Stream.resource(
-      fn -> {result_ref, 0, total_rows} end,
-      fn {ref, offset, remaining} ->
-        if remaining > 0 do
-          fetch_size = min(chunk_size, remaining)
-          
-          case Duckdbex.fetch_chunk(ref, offset, fetch_size) do
-            {:ok, rows} when rows != [] ->
-              # 行をマップに変換
-              processed_rows = Enum.map(rows, fn row ->
-                columns
-                |> Enum.zip(row)
-                |> Enum.into(%{})
-              end)
-              
-              {processed_rows, {ref, offset + length(rows), remaining - length(rows)}}
-              
-            _ ->
-              {:halt, ref}
-          end
-        else
-          {:halt, ref}
-        end
-      end,
-      fn ref ->
-        Duckdbex.close_result(ref)
-      end
-    )
+  defp create_result_stream(result_ref, columns, chunk_size, _total_rows) do
+    # DuckDBexは一度に全データを返すため、fetch_allを使用してチャンク化
+    all_rows = Duckdbex.fetch_all(result_ref)
+    
+    # アトムキーのカラム名
+    atom_columns = Enum.map(columns, &String.to_atom/1)
+    
+    # 行をマップに変換してチャンク化
+    all_rows
+    |> Enum.map(fn row ->
+      atom_columns
+      |> Enum.zip(row)
+      |> Enum.into(%{})
+    end)
+    |> Stream.chunk_every(chunk_size)
+    |> Stream.flat_map(&Function.identity/1)
   end
   
   defp get_columns(result_ref) do
+    # Duckdbex.columnsは直接カラム名のリストを返す
     case Duckdbex.columns(result_ref) do
-      {:ok, columns} -> 
+      columns when is_list(columns) -> 
         Enum.map(columns, &String.to_atom/1)
       _ -> 
         []
     end
   end
   
-  defp get_row_count(result_ref) do
-    case Duckdbex.row_count(result_ref) do
-      {:ok, count} -> count
-      _ -> :unknown
-    end
-  end
   
   defp add_prefetch_buffer(stream, buffer_size) do
     # 非同期プリフェッチを追加
@@ -273,11 +224,6 @@ if Code.ensure_loaded?(Duckdbex) do
     )
   end
   
-  defp decode_arrow_chunk(arrow_chunk) do
-    # Arrow形式のデータをElixirのマップに変換
-    # これは簡略化された実装
-    arrow_chunk
-  end
   
   defp init_parallel_scan(conn, table_name, parallelism, where_clause) do
     # 並列スキャンの初期化
@@ -291,7 +237,7 @@ if Code.ensure_loaded?(Duckdbex) do
     count_sql = "SELECT COUNT(*) as count FROM #{table_name}"
     case Duckdbex.query(conn, count_sql, []) do
       {:ok, result} ->
-        [{count}] = Duckdbex.fetch_all(result)
+        [[count]] = Duckdbex.fetch_all(result)
         rows_per_worker = div(count, parallelism)
         
         {:ok, %{
@@ -318,7 +264,7 @@ if Code.ensure_loaded?(Duckdbex) do
     
     case create(conn, worker_sql, [], chunk_size: chunk_size) do
       {:ok, stream} -> stream
-      _ -> Stream.empty()
+      _ -> Stream.unfold(nil, fn _ -> nil end)
     end
   end
   
@@ -352,17 +298,17 @@ if Code.ensure_loaded?(Duckdbex) do
   end
   
   defp calculate_window_start(window_id, window_size) do
-    DateTime.from_unix!(window_id * window_size)
+    DateTime.from_unix!(round(window_id * window_size))
   end
   
   defp calculate_window_end(window_id, window_size) do
-    DateTime.from_unix!((window_id + 1) * window_size)
+    DateTime.from_unix!(round((window_id + 1) * window_size))
   end
   end
 
   # ストリームバッファのGenServer実装
   defmodule StreamBuffer do
-  use GenServer
+    use GenServer
   
   def init({stream, buffer_size}) do
     # 非同期でストリームからデータを取得

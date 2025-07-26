@@ -41,7 +41,14 @@
       "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:90 --trace)",
       "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs:94 --trace)",
-      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs --formatter Elixir.ExUnit.CLIFormatter)"
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs --formatter Elixir.ExUnit.CLIFormatter)",
+      "Bash(mix deps:*)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --max-cases 1)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs:59 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs:59 --no-compile)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --no-compile)"
     ],
     "deny": []
   }
