@@ -12,6 +12,7 @@
 - DuckDBストリーミングのfetch_chunk対応
 - **EctoドライバーのStream対応実装** ✨
 - **PostgreSQLドライバーの専用テスト作成（2025-07-26完了）** ✨
+- **PostgreSQL/DuckDBキャスト構文(::type)の完全サポート（2025-07-26完了）** ✨
 
 ### 📊 ドライバー実装状況
 | ドライバー | 基本機能 | ストリーミング | テスト | 状態 |
@@ -140,11 +141,17 @@
   - ウィンドウ関数、CTE、全文検索のテスト
   - ストリーミング機能の包括的なテスト
   - Yesql統合テスト（defqueryを使用したテスト）
+- ✅ データベースキャスト構文の完全サポート
+  - PostgreSQL/DuckDBの `::type` 構文を正しく処理
+  - 包括的なテストスイート（キャスト構文、回帰テスト、実使用例）
+  - 各データベースのキャスト構文に対応（CAST関数、CONVERT関数）
+  - デグレードを防ぐ詳細な回帰テストを実装
 
 ## 📚 参考資料
 
 - [YesQL設計原則](../../CLAUDE.md#yesqlの設計原則)
 - [各ドライバーの実装状況](./DriverStatus.md)
 - [Ectoストリーミングガイド](../guides/ecto_streaming.md)
+- [データベースキャスト構文サポート](../guides/cast_syntax_support.md)
 - [DuckDBex公式ドキュメント](https://github.com/AlexR2D2/duckdbex)
 - [元のyesqlリポジトリ](https://github.com/woylie/yesql)

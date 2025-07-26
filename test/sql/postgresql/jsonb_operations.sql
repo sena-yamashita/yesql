@@ -2,7 +2,7 @@
 -- JSONB配列内のタグで検索
 SELECT id, data
 FROM users
-WHERE data->'tags' @> :tag
+WHERE data->'tags' @> :tag::jsonb
 
 -- name: find_users_by_attributes
 -- JSONB属性で検索
