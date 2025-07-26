@@ -7,6 +7,19 @@ end
 # DuckDBテストが有効な場合のみDuckDBexを起動
 if System.get_env("DUCKDB_TEST") == "true" do
   {:ok, _} = Application.ensure_all_started(:duckdbex)
+else
+  # DuckDBテストに関する警告を表示
+  if Mix.env() == :test do
+    has_duckdb_tests = File.ls!("test")
+    |> Enum.any?(fn file -> 
+      file =~ ~r/duckdb.*\.exs$/ && 
+      File.read!("test/#{file}") =~ ~r/@tag\s+:duckdb/
+    end)
+    
+    if has_duckdb_tests do
+      IO.puts("\n⚠️  DuckDBテストを実行するには: DUCKDB_TEST=true mix test")
+    end
+  end
 end
 
 # CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
@@ -95,6 +108,8 @@ defmodule TestHelper do
         {:ok, conn} = Duckdbex.connection(db)
         {:ok, duckdb: conn, db: db}
       _ ->
+        # 環境変数が設定されていない場合、警告メッセージを表示
+        IO.puts("\n⚠️  DuckDBテストはスキップされます。実行するには: DUCKDB_TEST=true mix test")
         :skip
     end
   end

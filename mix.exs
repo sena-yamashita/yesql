@@ -104,7 +104,7 @@ defmodule Yesql.Mixfile do
       "test.postgres": ["cmd FULL_TEST=true mix test --only postgres"],
       "test.mysql": ["cmd FULL_TEST=true MYSQL_TEST=true mix test --only mysql"],
       "test.mssql": ["cmd FULL_TEST=true MSSQL_TEST=true mix test --only mssql"],
-      "test.duckdb": ["cmd FULL_TEST=true DUCKDB_TEST=true mix test --only duckdb"],
+      "test.duckdb": ["cmd DUCKDB_TEST=true mix test --only duckdb"],
       
       # Watch mode for unit tests
       "test.watch.unit": ["test.watch --only unit"]

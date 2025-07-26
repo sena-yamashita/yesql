@@ -529,8 +529,11 @@ createdb yesql_test
 # PostgreSQLテスト
 mix test.postgres
 
-# DuckDBテスト
+# DuckDBテスト（環境変数が自動設定されます）
 mix test.duckdb
+
+# または環境変数を手動で設定
+DUCKDB_TEST=true mix test --only duckdb
 
 # MySQLテスト
 mix test.mysql
@@ -541,6 +544,25 @@ mix test.mssql
 # Oracleテスト
 ORACLE_TEST=true ORACLE_PASSWORD=password mix test test/oracle_test.exs
 ```
+
+### 環境変数について
+
+テスト実行時、特定のドライバーのテストは環境変数の設定が必要です。
+環境変数が設定されていない場合、該当するテストはスキップされ、警告メッセージが表示されます：
+
+```
+⚠️  DuckDBテストを実行するには: DUCKDB_TEST=true mix test
+```
+
+この仕組みにより、必要な環境変数の設定を忘れることを防ぎます。
+
+**主な環境変数:**
+- `DUCKDB_TEST=true` - DuckDBテストを有効化
+- `MYSQL_TEST=true` - MySQLテストを有効化
+- `MSSQL_TEST=true` - MSSQLテストを有効化
+- `ORACLE_TEST=true` - Oracleテストを有効化
+- `FULL_TEST=true` - 全ての統合テストを実行
+- `CI=true` - CI環境での実行（全テスト実行）
 
 ### パフォーマンステスト
 

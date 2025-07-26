@@ -47,7 +47,7 @@ defmodule DuckDBTest do
         {:ok, conn: conn, db: db}
         
       _ ->
-        :ignore
+        {:ok, %{skip: true}}
     end
   end
 
@@ -100,9 +100,9 @@ defmodule DuckDBTest do
       ]
       
       for {date, product, amount, quantity} <- sales_data do
-        # DuckDBはパラメータをサポートしないため、値を直接埋め込む
-        sql = "INSERT INTO sales (date, product, amount, quantity) VALUES ('#{Date.to_iso8601(date)}', '#{product}', #{amount}, #{quantity})"
-        {:ok, _} = Duckdbex.query(conn, sql, [])
+        sql = "INSERT INTO sales (date, product, amount, quantity) VALUES ($1, $2, $3, $4)"
+        # DuckDBexはDate型を直接サポートしないため、文字列に変換
+        {:ok, _} = Duckdbex.query(conn, sql, [Date.to_iso8601(date), product, amount, quantity])
       end
       
       # 分析クエリ実行
@@ -120,8 +120,8 @@ defmodule DuckDBTest do
     @tag :duckdb
     test "エラーハンドリング", %{conn: conn} do
       # 無効なカラム名でエラー
-      invalid_sql = "INSERT INTO ducks (invalid_column) VALUES (123)"
-      assert {:error, _} = Duckdbex.query(conn, invalid_sql, [])
+      invalid_sql = "INSERT INTO ducks (invalid_column) VALUES ($1)"
+      assert {:error, _} = Duckdbex.query(conn, invalid_sql, [123])
     end
   end
 
@@ -143,8 +143,8 @@ defmodule DuckDBTest do
     @tag :duckdb
     test "NULL値の処理", %{conn: conn} do
       # nameをNULLで挿入
-      sql = "INSERT INTO ducks (age, name) VALUES (15, NULL)"
-      {:ok, _} = Duckdbex.query(conn, sql, [])
+      sql = "INSERT INTO ducks (age, name) VALUES ($1, NULL)"
+      {:ok, _} = Duckdbex.query(conn, sql, [15])
       
       # 結果取得
       assert {:ok, [duck]} = QueryDuckDB.select_older_ducks(conn, age: 10)

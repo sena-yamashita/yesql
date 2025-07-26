@@ -91,10 +91,9 @@ defmodule Yesql.DriverTest do
     @tag :duckdb
     test "execute/4の動作", %{duckdb: conn} do
       driver = %Yesql.Driver.DuckDB{}
-      # DuckDBはパラメータをサポートしないので、値を直接埋め込む
-      sql = "INSERT INTO test_table (id, value) VALUES (1, 'test')"
+      sql = "INSERT INTO test_table (id, value) VALUES ($1, $2)"
       
-      assert {:ok, result} = Yesql.Driver.execute(driver, conn, sql, [])
+      assert {:ok, result} = Yesql.Driver.execute(driver, conn, sql, [1, "test"])
       # DuckDBのINSERTは影響した行数を返す
       assert result.rows == [[1]]
     end
@@ -115,8 +114,8 @@ defmodule Yesql.DriverTest do
       driver = %Yesql.Driver.DuckDB{}
       
       # データ挿入
-      insert_sql = "INSERT INTO test_table (id, value) VALUES (42, 'answer')"
-      {:ok, _} = Duckdbex.query(conn, insert_sql, [])
+      insert_sql = "INSERT INTO test_table (id, value) VALUES ($1, $2)"
+      {:ok, _} = Duckdbex.query(conn, insert_sql, [42, "answer"])
       
       # データ取得
       select_sql = "SELECT id, value FROM test_table"
