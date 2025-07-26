@@ -74,31 +74,16 @@ defmodule Yesql do
 
   @doc false
   def parse(sql) do
-    with {:ok, tokens, _} <- Yesql.Tokenizer.tokenize(sql) do
-      {_, query_iodata, params_pairs} =
-        tokens
-        |> Enum.reduce({1, [], []}, &extract_param/2)
-
-      sql = IO.iodata_to_binary(query_iodata)
-      params = params_pairs |> Keyword.keys() |> Enum.reverse()
-
-      {:ok, sql, params}
+    # 設定されたトークナイザーを使用
+    with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
+      # PostgreSQL形式（$1, $2...）に変換
+      format_param = fn _param, index -> "$#{index}" end
+      {converted_sql, params} = Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
+      
+      {:ok, converted_sql, params}
     end
   end
 
-  defp extract_param({:named_param, param}, {i, sql, params}) do
-    case params[param] do
-      nil ->
-        {i + 1, [sql, "$#{i}"], [{param, i} | params]}
-
-      num ->
-        {i, [sql, "$#{num}"], params}
-    end
-  end
-
-  defp extract_param({:fragment, fragment}, {i, sql, params}) do
-    {i, [sql, fragment], params}
-  end
 
   @doc false
   def exec(conn, driver, sql, param_spec, data) do

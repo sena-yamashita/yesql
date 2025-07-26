@@ -49,37 +49,12 @@ defmodule Yesql.Driver.Oracle do
           # => {"SELECT * FROM users WHERE name = :1 AND age = :2", ["Alice", 30]}
       """
       def convert_params(_driver, sql, _param_spec) do
-        # SQLから名前付きパラメータの出現順序を保持して取得
-        param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
-        
-        # すべての名前付きパラメータを出現順に取得
-        param_occurrences = Regex.scan(param_regex, sql)
-        |> Enum.map(fn [full_match, param_name] -> 
-          {full_match, String.to_atom(param_name)}
-        end)
-        
-        # 重複を排除しつつ順序を保持
-        unique_params = param_occurrences
-        |> Enum.map(&elem(&1, 1))
-        |> Enum.uniq()
-        
-        # パラメータを:1, :2...の形式に変換
-        param_mapping = unique_params
-        |> Enum.with_index(1)
-        |> Enum.into(%{}, fn {param, index} -> 
-          {param, ":#{index}"}
-        end)
-        
-        # SQLを変換（:name形式の部分のみを変換、既に:1形式のものは変換しない）
-        converted_sql = Enum.reduce(param_mapping, sql, fn {param_name, oracle_param}, acc_sql ->
-          # 数字で始まらないパラメータのみ変換（:1, :2などは変換しない）
-          String.replace(acc_sql, ~r/:#{param_name}\b/, oracle_param)
-        end)
-        
-        # パラメータ値のリストを作成
-        param_values = unique_params
-        
-        {converted_sql, param_values}
+        # 設定されたトークナイザーを使用してSQLトークンを解析
+        with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
+          # Oracleの:1, :2...形式に変換
+          format_param = fn _param, index -> ":#{index}" end
+          Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
+        end
       end
       
       @doc """

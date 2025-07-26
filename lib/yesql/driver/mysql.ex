@@ -49,23 +49,12 @@ defmodule Yesql.Driver.MySQL do
           # => {"SELECT * FROM users WHERE name = ? AND age = ?", ["Alice", 30]}
       """
       def convert_params(_driver, sql, _param_spec) do
-        # SQLから名前付きパラメータの出現順序を保持して取得
-        param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
-        
-        # すべての名前付きパラメータを出現順に取得
-        param_occurrences = Regex.scan(param_regex, sql)
-        |> Enum.map(fn [full_match, param_name] -> 
-          {full_match, String.to_atom(param_name)}
-        end)
-        
-        # MySQLでは同じパラメータでも出現順にすべて含める（重複を排除しない）
-        param_names = param_occurrences
-        |> Enum.map(&elem(&1, 1))
-        
-        # SQLを変換（:param → ?）
-        converted_sql = Regex.replace(param_regex, sql, "?")
-        
-        {converted_sql, param_names}
+        # 設定されたトークナイザーを使用してSQLトークンを解析
+        with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
+          # MySQLの?形式に変換（重複を許可）
+          format_fn = fn -> "?" end
+          Yesql.TokenizerHelper.extract_params_with_duplicates(tokens, format_fn)
+        end
       end
       
       @doc """

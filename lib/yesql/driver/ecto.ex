@@ -15,17 +15,11 @@ defmodule Yesql.Driver.Ecto do
       end
 
       def convert_params(_driver, sql, _param_spec) do
-        # SQL内の名前付きパラメータを位置パラメータに変換
+        # 設定されたトークナイザーを使用してSQLトークンを解析
         # Ectoも基本的にはPostgreSQLと同じ$1, $2...形式を使用
-        with {:ok, tokens, _} <- Yesql.Tokenizer.tokenize(sql) do
-          {_, query_iodata, params_pairs} =
-            tokens
-            |> Enum.reduce({1, [], []}, &extract_param/2)
-
-          converted_sql = IO.iodata_to_binary(query_iodata)
-          param_mapping = params_pairs |> Keyword.keys() |> Enum.reverse()
-
-          {converted_sql, param_mapping}
+        with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
+          format_param = fn _param, index -> "$#{index}" end
+          Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
         end
       end
 
@@ -47,21 +41,6 @@ defmodule Yesql.Driver.Ecto do
       
       def process_result(_driver, {:error, error}) do
         {:error, error}
-      end
-      
-      # パラメータ抽出のヘルパー関数
-      defp extract_param({:named_param, param}, {i, sql, params}) do
-        case params[param] do
-          nil ->
-            {i + 1, [sql, "$#{i}"], [{param, i} | params]}
-
-          num ->
-            {i, [sql, "$#{num}"], params}
-        end
-      end
-
-      defp extract_param({:fragment, fragment}, {i, sql, params}) do
-        {i, [sql, fragment], params}
       end
     end
   end

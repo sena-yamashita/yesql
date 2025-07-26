@@ -31,28 +31,12 @@ defmodule Yesql.Driver.SQLite do
       名前付きパラメータをSQLiteの?形式に変換する
       """
       def convert_params(_driver, sql, _param_spec) do
-        # パラメータパターンの検出
-        param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
-        
-        # SQLからパラメータを抽出（出現順序を保持）
-        param_occurrences = Regex.scan(param_regex, sql)
-        |> Enum.map(fn [full_match, param_name] -> 
-          {full_match, String.to_atom(param_name)}
-        end)
-        
-        # パラメータ名のリスト（重複を除去しない、出現順序を保持）
-        param_list = Enum.map(param_occurrences, &elem(&1, 1))
-        
-        # ユニークなパラメータ名のリスト（出現順序を保持）
-        _unique_params = param_occurrences
-        |> Enum.map(&elem(&1, 1))
-        |> Enum.uniq()
-        
-        # SQLの変換（名前付きパラメータを?に置換）
-        converted_sql = Regex.replace(param_regex, sql, "?")
-        
-        # SQLiteは?形式を使用し、パラメータは出現順序で提供される必要がある
-        {converted_sql, param_list}
+        # 設定されたトークナイザーを使用してSQLトークンを解析
+        with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
+          # SQLiteの?形式に変換（重複を許可）
+          format_fn = fn -> "?" end
+          Yesql.TokenizerHelper.extract_params_with_duplicates(tokens, format_fn)
+        end
       end
       
       @doc """
