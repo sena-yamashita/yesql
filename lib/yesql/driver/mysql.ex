@@ -48,7 +48,7 @@ defmodule Yesql.Driver.MySQL do
                         [name: "Alice", age: 30])
           # => {"SELECT * FROM users WHERE name = ? AND age = ?", ["Alice", 30]}
       """
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         # SQLから名前付きパラメータの出現順序を保持して取得
         param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
         
@@ -58,26 +58,12 @@ defmodule Yesql.Driver.MySQL do
           {full_match, String.to_atom(param_name)}
         end)
         
-        # 重複を排除しつつ順序を保持
-        unique_params = param_occurrences
+        # MySQLでは同じパラメータでも出現順にすべて含める（重複を排除しない）
+        param_names = param_occurrences
         |> Enum.map(&elem(&1, 1))
-        |> Enum.uniq()
         
         # SQLを変換（:param → ?）
         converted_sql = Regex.replace(param_regex, sql, "?")
-        
-        # param_specからパラメータ名のみのリストを作成
-        param_names = case param_spec do
-          # 新しい形式: [{:name, index}, ...]
-          [{_name, _index} | _] ->
-            unique_params
-          # 古い形式: [{:name, :type, index}, ...]
-          [{_name, _type, _index} | _] ->
-            unique_params
-          # その他の形式
-          _ ->
-            unique_params
-        end
         
         {converted_sql, param_names}
       end
