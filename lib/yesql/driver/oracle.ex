@@ -48,7 +48,7 @@ defmodule Yesql.Driver.Oracle do
                         [name: "Alice", age: 30])
           # => {"SELECT * FROM users WHERE name = :1 AND age = :2", ["Alice", 30]}
       """
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         # SQLから名前付きパラメータの出現順序を保持して取得
         param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
         
@@ -123,7 +123,7 @@ defmodule Yesql.Driver.Oracle do
         {:error, "Jamdb.Oracle is not loaded. Please add {:jamdb_oracle, \"~> 0.5\"} to your dependencies."}
       end
       
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         {sql, []}
       end
       

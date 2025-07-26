@@ -48,7 +48,7 @@ defmodule Yesql.Driver.MSSQL do
                         [name: "Alice", age: 30])
           # => {"SELECT * FROM users WHERE name = @p1 AND age = @p2", ["Alice", 30]}
       """
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         # SQLから名前付きパラメータの出現順序を保持して取得
         param_regex = ~r/:([a-zA-Z_][a-zA-Z0-9_]*)/
         
@@ -117,7 +117,7 @@ defmodule Yesql.Driver.MSSQL do
         {:error, "Tds is not loaded. Please add {:tds, \"~> 2.3\"} to your dependencies."}
       end
       
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         {sql, []}
       end
       

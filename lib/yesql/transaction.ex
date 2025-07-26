@@ -5,7 +5,7 @@ defmodule Yesql.Transaction do
   各データベースドライバーに対して統一的なトランザクション管理インターフェースを提供します。
   """
   
-  alias Yesql.{Driver, DriverFactory}
+  alias Yesql.DriverFactory
   
   @doc """
   トランザクション内でコードブロックを実行する

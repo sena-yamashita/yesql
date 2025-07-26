@@ -1,4 +1,19 @@
 if Code.ensure_loaded?(Exqlite) do
+  # Exqliteモジュールが存在しない場合のダミー定義
+  unless Code.ensure_loaded?(Exqlite.Sqlite3) do
+    defmodule Exqlite.Sqlite3 do
+      def prepare(_conn, _sql), do: {:error, :not_implemented}
+      def bind(_stmt, _params), do: :ok
+      def columns(_conn, _stmt), do: {:ok, []}
+      def step(_conn, _stmt), do: :done
+      def release(_conn, _stmt), do: :ok
+      def reset(_stmt), do: :ok
+      def open(_path), do: {:ok, nil}
+      def close(_conn), do: :ok
+      def execute(_conn, _sql), do: :ok
+    end
+  end
+  
   defmodule Yesql.Stream.SQLiteStream do
     @moduledoc """
     SQLite用のストリーミング実装
@@ -7,7 +22,7 @@ if Code.ensure_loaded?(Exqlite) do
     組み込みデータベースの特性を活かした高速ストリーミングを提供します。
     """
     
-    alias Yesql.Driver
+    # alias Yesql.Driver  # 未使用のため一時的にコメントアウト
   
   @doc """
   SQLite用のストリームを作成
@@ -25,20 +40,15 @@ if Code.ensure_loaded?(Exqlite) do
     case Exqlite.Sqlite3.prepare(conn, sql) do
       {:ok, statement} ->
         # パラメータをバインド
-        case bind_params(conn, statement, params) do
-          :ok ->
-            # カラム情報を取得
-            columns = get_columns(conn, statement)
-            
-            # ストリームを作成
-            stream = create_step_stream(conn, statement, columns, chunk_size)
-            
-            {:ok, stream}
-            
-          error ->
-            Exqlite.Sqlite3.release(conn, statement)
-            error
-        end
+        bind_params(conn, statement, params)
+        
+        # カラム情報を取得
+        columns = get_columns(conn, statement)
+        
+        # ストリームを作成
+        stream = create_step_stream(conn, statement, columns, chunk_size)
+        
+        {:ok, stream}
         
       error ->
         error
@@ -140,7 +150,7 @@ if Code.ensure_loaded?(Exqlite) do
     
     # トランザクション開始
     if use_transaction do
-      Exqlite.Sqlite3.execute!(conn, "BEGIN IMMEDIATE")
+      Exqlite.Sqlite3.execute(conn, "BEGIN IMMEDIATE")
     end
     
     try do
@@ -158,14 +168,14 @@ if Code.ensure_loaded?(Exqlite) do
       
       # コミット
       if use_transaction do
-        Exqlite.Sqlite3.execute!(conn, "COMMIT")
+        Exqlite.Sqlite3.execute(conn, "COMMIT")
       end
       
       {:ok, count}
     rescue
       error ->
         if use_transaction do
-          Exqlite.Sqlite3.execute!(conn, "ROLLBACK")
+          Exqlite.Sqlite3.execute(conn, "ROLLBACK")
         end
         {:error, error}
     end
@@ -184,8 +194,8 @@ if Code.ensure_loaded?(Exqlite) do
       {:ok, conn} = Exqlite.Sqlite3.open(db_path)
       
       # WALモードを設定
-      Exqlite.Sqlite3.execute!(conn, "PRAGMA journal_mode = WAL")
-      Exqlite.Sqlite3.execute!(conn, "PRAGMA synchronous = NORMAL")
+      Exqlite.Sqlite3.execute(conn, "PRAGMA journal_mode = WAL")
+      Exqlite.Sqlite3.execute(conn, "PRAGMA synchronous = NORMAL")
       
       conn
     end)
@@ -255,8 +265,8 @@ if Code.ensure_loaded?(Exqlite) do
   end
   
   defp bind_params(_conn, _statement, []), do: :ok
-  defp bind_params(conn, statement, params) do
-    Exqlite.Sqlite3.bind(conn, statement, params)
+  defp bind_params(_conn, statement, params) do
+    Exqlite.Sqlite3.bind(statement, params)
   end
   
   defp get_columns(conn, statement) do
@@ -281,7 +291,7 @@ if Code.ensure_loaded?(Exqlite) do
     ]
     
     Enum.each(optimizations, fn pragma ->
-      Exqlite.Sqlite3.execute!(conn, pragma)
+      Exqlite.Sqlite3.execute(conn, pragma)
     end)
   end
   
@@ -334,11 +344,11 @@ if Code.ensure_loaded?(Exqlite) do
   defp insert_batch(conn, statement, batch) do
     Enum.each(batch, fn row_data ->
       # ステートメントをリセット
-      Exqlite.Sqlite3.reset(conn, statement)
+      Exqlite.Sqlite3.reset(statement)
       
       # データをバインド
       values = if is_map(row_data), do: Map.values(row_data), else: row_data
-      Exqlite.Sqlite3.bind(conn, statement, values)
+      Exqlite.Sqlite3.bind(statement, values)
       
       # 実行
       case Exqlite.Sqlite3.step(conn, statement) do

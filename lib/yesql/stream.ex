@@ -6,7 +6,7 @@ defmodule Yesql.Stream do
   各データベースドライバーに対して統一的なストリーミングインターフェースを提供します。
   """
   
-  alias Yesql.{Driver, DriverFactory}
+  alias Yesql.DriverFactory
   
   @doc """
   ストリーミングクエリを実行し、Streamを返す

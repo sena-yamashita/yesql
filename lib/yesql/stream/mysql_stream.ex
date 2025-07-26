@@ -7,7 +7,7 @@ if Code.ensure_loaded?(MyXQL) do
     MySQLのカーソルベースの結果セット取得を活用します。
     """
     
-    alias Yesql.Driver
+    # alias Yesql.Driver  # 未使用のため一時的にコメントアウト
   
   @doc """
   MySQL用のストリームを作成
@@ -119,7 +119,7 @@ if Code.ensure_loaded?(MyXQL) do
   
   MySQLのパーティションを活用して並列にデータを取得します。
   """
-  def create_parallel_partitioned(conns, table, sql_template, params, opts \\ []) do
+  def create_parallel_partitioned(conns, _table, sql_template, params, opts \\ []) do
     partition_key = Keyword.get(opts, :partition_key, :id)
     parallelism = length(conns)
     
@@ -268,7 +268,7 @@ if Code.ensure_loaded?(MyXQL) do
             remaining = List.delete(tasks, task)
             fetch_from_tasks(remaining, nil)
           data ->
-            next_task = get_next_task(tasks, task)
+            # next_task = get_next_task(tasks, task)  # 未使用のため一時的にコメントアウト
             {tasks, data}
         end
         
@@ -279,11 +279,12 @@ if Code.ensure_loaded?(MyXQL) do
     end
   end
   
-  defp get_next_task(tasks, current_task) do
-    index = Enum.find_index(tasks, &(&1 == current_task))
-    next_index = rem(index + 1, length(tasks))
-    Enum.at(tasks, next_index)
-  end
+  # 未使用の関数をコメントアウト
+  # defp get_next_task(tasks, current_task) do
+  #   index = Enum.find_index(tasks, &(&1 == current_task))
+  #   next_index = rem(index + 1, length(tasks))
+  #   Enum.at(tasks, next_index)
+  # end
   
   defp write_headers(file, headers, :csv) do
     line = headers |> Enum.map(&to_string/1) |> Enum.join(",")

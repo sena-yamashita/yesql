@@ -13,7 +13,7 @@ defmodule Yesql.Driver.Postgrex do
         Postgrex.query(conn, sql, params)
       end
 
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         # SQLトークンを解析して名前付きパラメータを$1, $2...形式に変換
         with {:ok, tokens, _} <- Yesql.Tokenizer.tokenize(sql) do
           {_, query_iodata, params_pairs} =

@@ -14,7 +14,7 @@ defmodule Yesql.Driver.Ecto do
         Ecto.Adapters.SQL.query(repo, sql, params)
       end
 
-      def convert_params(_driver, sql, param_spec) do
+      def convert_params(_driver, sql, _param_spec) do
         # SQL内の名前付きパラメータを位置パラメータに変換
         # Ectoも基本的にはPostgreSQLと同じ$1, $2...形式を使用
         with {:ok, tokens, _} <- Yesql.Tokenizer.tokenize(sql) do

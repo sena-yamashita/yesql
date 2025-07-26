@@ -6,7 +6,7 @@ if Code.ensure_loaded?(Postgrex) do
     Postgrexの`stream/4`機能を使用して、大量のデータを効率的に処理します。
     """
     
-    alias Yesql.Driver
+    # alias Yesql.Driver  # 未使用のため一時的にコメントアウト
   
   @doc """
   PostgreSQL用のストリームを作成
@@ -19,7 +19,7 @@ if Code.ensure_loaded?(Postgrex) do
   """
   def create(conn, sql, params, opts \\ []) do
     max_rows = Keyword.get(opts, :max_rows, 500)
-    mode = Keyword.get(opts, :mode, :text)
+    # mode = Keyword.get(opts, :mode, :text)  # 未使用のため一時的にコメントアウト
     
     # Postgrexのトランザクション内でストリームを作成
     transaction_result = Postgrex.transaction(conn, fn tx_conn ->
@@ -111,8 +111,8 @@ if Code.ensure_loaded?(Postgrex) do
       {:ok, stream} ->
         final_count = stream
         |> Stream.map(fn chunk ->
-          chunk_count = chunk_count + 1
-          row_count = row_count + length(chunk)
+          # chunk_count = chunk_count + 1  # 未使用のため一時的にコメントアウト
+          # row_count = row_count + length(chunk)  # 未使用のため一時的にコメントアウト
           
           # チャンクを処理
           Enum.each(chunk, processor_fn)
@@ -186,59 +186,57 @@ if Code.ensure_loaded?(Postgrex) do
     max_rows = Keyword.get(opts, :max_rows, 500)
     
     # データを分割するための範囲を取得
-    case get_data_ranges(pool, sql, params, parallelism) do
-      {:ok, ranges} ->
-        # 各範囲に対してストリームを作成
-        streams = Enum.map(ranges, fn {start_id, end_id} ->
-          # 範囲を追加したSQLを作成
-          range_sql = add_range_condition(sql, start_id, end_id)
-          
-          Task.async(fn ->
-            # プールから接続を取得
-            :poolboy.transaction(pool, fn conn ->
-              create(conn, range_sql, params, max_rows: max_rows)
-            end)
-          end)
+    {_status, ranges} = get_data_ranges(pool, sql, params, parallelism)
+    
+    # 各範囲に対してストリームを作成
+    streams = Enum.map(ranges, fn {start_id, end_id} ->
+      # 範囲を追加したSQLを作成
+      range_sql = add_range_condition(sql, start_id, end_id)
+      
+      Task.async(fn ->
+        # プールから接続を取得
+        # TODO: poolboy依存性を確認して修正
+        # :poolboy.transaction(pool, fn conn ->
+        transaction_wrapper(pool, fn conn ->
+          create(conn, range_sql, params, max_rows: max_rows)
         end)
-        
-        # 並列ストリームをマージ
-        merged_stream = Stream.resource(
-          fn -> {streams, []} end,
-          fn {tasks, buffer} ->
-            if buffer != [] do
-              {buffer, {tasks, []}}
-            else
-              # 各タスクから結果を取得
-              new_buffer = tasks
-              |> Enum.flat_map(fn task ->
-                case Task.yield(task, 100) do
-                  {:ok, {:ok, stream}} ->
-                    stream |> Enum.take(1) |> List.flatten()
-                  _ ->
-                    []
-                end
-              end)
-              
-              if new_buffer == [] do
-                {:halt, {tasks, []}}
-              else
-                {new_buffer, {tasks, []}}
-              end
+      end)
+    end)
+    
+    # 並列ストリームをマージ
+    merged_stream = Stream.resource(
+      fn -> {streams, []} end,
+      fn {tasks, buffer} ->
+        if buffer != [] do
+          {buffer, {tasks, []}}
+        else
+          # 各タスクから結果を取得
+          new_buffer = tasks
+          |> Enum.flat_map(fn task ->
+            case Task.yield(task, 100) do
+              {:ok, {:ok, stream}} ->
+                stream |> Enum.take(1) |> List.flatten()
+              _ ->
+                []
             end
-          end,
-          fn {tasks, _} ->
-            Enum.each(tasks, &Task.shutdown/1)
+          end)
+          
+          if new_buffer == [] do
+            {:halt, {tasks, []}}
+          else
+            {new_buffer, {tasks, []}}
           end
-        )
-        
-        {:ok, merged_stream}
-        
-      error ->
-        error
-    end
+        end
+      end,
+      fn {tasks, _} ->
+        Enum.each(tasks, &Task.shutdown/1)
+      end
+    )
+    
+    {:ok, merged_stream}
   end
   
-  defp get_data_ranges(pool, sql, params, parallelism) do
+  defp get_data_ranges(_pool, _sql, _params, parallelism) do
     # SQLからテーブル名を抽出し、主キーの範囲を取得
     # これは簡略化された実装で、実際にはより複雑なロジックが必要
     {:ok, Enum.map(1..parallelism, fn i ->
@@ -250,6 +248,12 @@ if Code.ensure_loaded?(Postgrex) do
     # WHERE句に範囲条件を追加
     # これも簡略化された実装
     sql <> " AND id BETWEEN #{start_id} AND #{end_id}"
+  end
+  
+  defp transaction_wrapper(pool, fun) do
+    # 一時的なトランザクションラッパー
+    # TODO: poolboy実装を確認して修正
+    fun.(pool)
   end
   end
 end

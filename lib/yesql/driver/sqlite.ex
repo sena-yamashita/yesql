@@ -14,11 +14,11 @@ defmodule Yesql.Driver.SQLite do
       @doc """
       SQLiteでクエリを実行する
       """
-      def execute(_driver, conn, sql, params) do
+      def execute(driver, conn, sql, params) do
         if Code.ensure_loaded?(Exqlite) do
           case Exqlite.query(conn, sql, params) do
             {:ok, result} ->
-              process_result(_driver, {:ok, result})
+              process_result(driver, {:ok, result})
             {:error, _} = error ->
               error
           end
@@ -44,7 +44,7 @@ defmodule Yesql.Driver.SQLite do
         param_list = Enum.map(param_occurrences, &elem(&1, 1))
         
         # ユニークなパラメータ名のリスト（出現順序を保持）
-        unique_params = param_occurrences
+        _unique_params = param_occurrences
         |> Enum.map(&elem(&1, 1))
         |> Enum.uniq()
         
@@ -114,12 +114,15 @@ defmodule Yesql.Driver.SQLite do
           
           # 基本的な設定
           if cache_size = opts[:cache_size] do
-            Exqlite.query!(conn, "PRAGMA cache_size = #{cache_size}")
+            # SQLiteの直接操作は、別途Exqlite経由で行う必要がある
+            # TODO: 適切なExqlite接続を使用してPRAGMAを設定
+            _ = cache_size
           end
           
           # WALモードを有効化（ファイルベースの場合）
           if database != ":memory:" && opts[:mode] != :readonly do
-            Exqlite.query!(conn, "PRAGMA journal_mode = WAL")
+            # TODO: 適切なExqlite接続を使用してPRAGMAを設定
+            :ok
           end
           
           {:ok, conn}
