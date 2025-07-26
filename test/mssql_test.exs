@@ -3,7 +3,6 @@ defmodule YesqlMSSQLTest do
   
   # MSSQLテストタグ
   @moduletag :mssql
-  @moduletag :skip_on_ci
   
   defmodule Queries do
     use Yesql, driver: :mssql
@@ -14,29 +13,20 @@ defmodule YesqlMSSQLTest do
   end
   
   setup_all do
-    case System.get_env("MSSQL_TEST") do
-      "true" ->
-        # MSSQL設定
-        config = [
-          hostname: System.get_env("MSSQL_HOST", "localhost"),
-          port: String.to_integer(System.get_env("MSSQL_PORT", "1433")),
-          username: System.get_env("MSSQL_USER", "sa"),
-          password: System.get_env("MSSQL_PASSWORD", "YourStrong!Passw0rd"),
-          database: System.get_env("MSSQL_DATABASE", "yesql_test"),
-          trust_server_certificate: true
-        ]
-        
-        # Tdsプロセスを開始
-        {:ok, pid} = Tds.start_link(config)
-        
-        # テーブル作成
-        setup_database(pid)
-        
-        {:ok, conn: pid}
-        
-      _ ->
-        IO.puts "MSSQLテストをスキップします。実行するには MSSQL_TEST=true を設定してください。"
-        {:ok, %{}}
+    # CI環境では自動的にMSSQLテストを実行
+    if System.get_env("CI") || System.get_env("MSSQL_TEST") == "true" do
+      case TestHelper.new_mssql_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          # テーブル作成
+          setup_database(ctx.mssql)
+          {:ok, conn: ctx.mssql}
+        _ ->
+          IO.puts "MSSQLテストをスキップします - 接続失敗"
+          :skip
+      end
+    else
+      IO.puts "MSSQLテストをスキップします。実行するには MSSQL_TEST=true を設定してください。"
+      :skip
     end
   end
   

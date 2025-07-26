@@ -20,7 +20,15 @@ defmodule RealWorldCastTest do
       defquery "test/sql/real_world/pg_array_ops.sql"
     end
 
-    setup [:new_postgrex_connection, :create_pg_real_world_tables]
+    setup do
+      case TestHelper.new_postgrex_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          create_pg_real_world_tables(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :postgres
     test "JSONB検索でのキャスト", %{postgrex: conn} do
@@ -111,7 +119,15 @@ defmodule RealWorldCastTest do
       defquery "test/sql/real_world/duckdb_analytics.sql"
     end
 
-    setup [:new_duckdb_connection, :create_duckdb_analytics_table]
+    setup do
+      case TestHelper.new_duckdb_connection(%{}) do
+        {:ok, ctx} ->
+          create_duckdb_analytics_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :duckdb
     test "分析クエリでのキャスト", %{duckdb: conn} do

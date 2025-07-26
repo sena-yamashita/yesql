@@ -4,11 +4,10 @@ defmodule SQLiteTest do
   @moduletag :sqlite
   
   # 環境変数でSQLiteテストを有効化
-  @moduletag :skip_on_ci
   
   setup_all do
-    case System.get_env("SQLITE_TEST") do
-      "true" ->
+    # CI環境またはSQLITE_TEST=trueで実行
+    if System.get_env("CI") || System.get_env("SQLITE_TEST") == "true" do
         # メモリデータベースでテスト
         {:ok, conn} = Exqlite.Sqlite3.open(":memory:")
         
@@ -94,10 +93,10 @@ defmodule SQLiteTest do
         ORDER BY post_count DESC;
         """)
         
-        [conn: conn]
-      
-      _ ->
-        {:ok, %{}}
+        {:ok, conn: conn}
+    else
+      IO.puts "SQLiteテストをスキップします。実行するには SQLITE_TEST=true を設定してください。"
+      :skip
     end
   end
   

@@ -3,7 +3,6 @@ defmodule YesqlMySQLTest do
   
   # MySQLテストタグ
   @moduletag :mysql
-  @moduletag :skip_on_ci
   
   defmodule Queries do
     use Yesql, driver: :mysql
@@ -14,28 +13,20 @@ defmodule YesqlMySQLTest do
   end
   
   setup_all do
-    case System.get_env("MYSQL_TEST") do
-      "true" ->
-        # MySQL設定
-        config = [
-          hostname: System.get_env("MYSQL_HOST", "localhost"),
-          port: String.to_integer(System.get_env("MYSQL_PORT", "3306")),
-          username: System.get_env("MYSQL_USER", "root"),
-          password: System.get_env("MYSQL_PASSWORD", ""),
-          database: System.get_env("MYSQL_DATABASE", "yesql_test")
-        ]
-        
-        # MyXQLプロセスを開始
-        {:ok, pid} = MyXQL.start_link(config)
-        
-        # テーブル作成
-        setup_database(pid)
-        
-        {:ok, conn: pid}
-        
-      _ ->
-        IO.puts "MySQLテストをスキップします。実行するには MYSQL_TEST=true を設定してください。"
-        {:ok, %{}}
+    # CI環境では自動的にMySQLテストを実行
+    if System.get_env("CI") || System.get_env("MYSQL_TEST") == "true" do
+      case TestHelper.new_mysql_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          # テーブル作成
+          setup_database(ctx.mysql)
+          {:ok, conn: ctx.mysql}
+        _ ->
+          IO.puts "MySQLテストをスキップします - 接続失敗"
+          :skip
+      end
+    else
+      IO.puts "MySQLテストをスキップします。実行するには MYSQL_TEST=true を設定してください。"
+      :skip
     end
   end
   

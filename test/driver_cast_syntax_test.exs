@@ -41,7 +41,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "PostgreSQL :: キャスト構文" do
-    setup [:new_postgrex_connection, :create_cast_test_table]
+    setup do
+      case TestHelper.new_postgrex_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          create_cast_test_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :postgres
     test ":: キャスト構文が正しく動作する", %{postgrex: conn} do
@@ -89,7 +97,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "DuckDB :: キャスト構文" do
-    setup [:new_duckdb_connection, :create_duckdb_cast_table]
+    setup do
+      case TestHelper.new_duckdb_connection(%{}) do
+        {:ok, ctx} ->
+          create_duckdb_cast_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :duckdb
     test "DuckDBでの::キャスト", %{duckdb: conn} do
@@ -102,7 +118,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "MySQL CAST関数構文" do
-    setup [:new_mysql_connection, :create_mysql_cast_table]
+    setup do
+      case TestHelper.new_mysql_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          create_mysql_cast_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :mysql
     test "MySQLのCAST関数", %{mysql: conn} do
@@ -118,7 +142,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "SQLite CAST関数構文" do
-    setup [:new_sqlite_connection, :create_sqlite_cast_table]
+    setup do
+      case TestHelper.new_sqlite_connection(%{}) do
+        {:ok, ctx} ->
+          create_sqlite_cast_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :sqlite
     test "SQLiteのCAST関数", %{sqlite: conn} do
@@ -134,7 +166,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "MSSQL CAST/CONVERT構文" do
-    setup [:new_mssql_connection, :create_mssql_cast_table]
+    setup do
+      case TestHelper.new_mssql_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          create_mssql_cast_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :mssql
     test "MSSQLのCAST/CONVERT", %{mssql: conn} do
@@ -150,7 +190,15 @@ defmodule DriverCastSyntaxTest do
   end
 
   describe "Oracle CAST関数構文" do
-    setup [:new_oracle_connection, :create_oracle_cast_table]
+    setup do
+      case TestHelper.new_oracle_connection(%{module: __MODULE__}) do
+        {:ok, ctx} ->
+          create_oracle_cast_table(ctx)
+          ctx
+        _ -> 
+          :skip
+      end
+    end
 
     @tag :oracle
     test "OracleのCAST関数", %{oracle: conn} do
@@ -259,46 +307,4 @@ defmodule DriverCastSyntaxTest do
     :ok
   end
 
-  defp new_mysql_connection(_ctx) do
-    case MyXQL.start_link(
-      hostname: "localhost",
-      username: "root",
-      password: "root",
-      database: "yesql_test"
-    ) do
-      {:ok, conn} -> {:ok, mysql: conn}
-      _ -> :skip
-    end
-  end
-
-  defp new_sqlite_connection(_ctx) do
-    {:ok, conn} = Exqlite.Sqlite3.open(":memory:")
-    {:ok, sqlite: conn}
-  end
-
-  defp new_mssql_connection(_ctx) do
-    case Tds.start_link(
-      hostname: "localhost",
-      username: "sa",
-      password: "YourStrong!Passw0rd",
-      database: "yesql_test",
-      port: 1433
-    ) do
-      {:ok, conn} -> {:ok, mssql: conn}
-      _ -> :skip
-    end
-  end
-
-  defp new_oracle_connection(_ctx) do
-    case Jamdb.Oracle.start_link(
-      hostname: "localhost",
-      port: 1521,
-      database: "XE",
-      username: "yesql_test",
-      password: "yesql_test"
-    ) do
-      {:ok, conn} -> {:ok, oracle: conn}
-      _ -> :skip
-    end
-  end
 end

@@ -3,7 +3,6 @@ defmodule YesqlOracleTest do
   
   # Oracleテストタグ
   @moduletag :oracle
-  @moduletag :skip_on_ci
   
   defmodule Queries do
     use Yesql, driver: :oracle
