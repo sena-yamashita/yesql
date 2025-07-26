@@ -162,6 +162,7 @@ defmodule Yesql.Stream do
   defp supports_streaming?(%Yesql.Driver.SQLite{}), do: true
   defp supports_streaming?(%Yesql.Driver.MSSQL{}), do: true
   defp supports_streaming?(%Yesql.Driver.Oracle{}), do: true
+  defp supports_streaming?(%Yesql.Driver.Ecto{}), do: true
   defp supports_streaming?(_), do: false
   
   defp create_stream(%Yesql.Driver.Postgrex{} = _driver, conn, sql, params, chunk_size, _opts) do
@@ -213,6 +214,15 @@ defmodule Yesql.Stream do
     try do
       module = Module.concat(Yesql.Stream, OracleStream)
       module.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
+    rescue
+      _ -> {:error, :streaming_module_not_available}
+    end
+  end
+  
+  defp create_stream(%Yesql.Driver.Ecto{} = _driver, conn, sql, params, _chunk_size, opts) do
+    try do
+      module = Module.concat(Yesql.Stream, EctoStream)
+      module.create(conn, sql, params, opts)
     rescue
       _ -> {:error, :streaming_module_not_available}
     end
