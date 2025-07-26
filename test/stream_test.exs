@@ -190,11 +190,10 @@ defmodule StreamTest do
       for {driver, conn} <- connections do
         sql = get_simple_select_sql(driver)
         
-        batch_sizes = []
-        
         {:ok, batch_count} = Stream.batch_process(get_conn(conn), sql, [1000], 100,
           fn batch ->
-            batch_sizes = [length(batch) | batch_sizes]
+            # バッチサイズを確認
+            _ = length(batch)
             
             # バッチ内の全ての値が連続していることを確認
             values = Enum.map(batch, & &1.value) |> Enum.sort()

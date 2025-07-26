@@ -80,7 +80,7 @@ defmodule YesqlMSSQLTest do
       assert count == 1
     end
     
-    test "パラメータが正しい順序で@p1, @p2...に置換される", %{conn: conn} do
+    test "パラメータが正しい順序で@p1, @p2...に置換される", %{conn: _conn} do
       # 複雑なクエリでパラメータの順序をテスト
       sql = "SELECT * FROM users WHERE age > :min_age AND name = :name AND age < :max_age"
       driver = %Yesql.Driver.MSSQL{}
@@ -91,7 +91,7 @@ defmodule YesqlMSSQLTest do
       assert param_order == [:min_age, :name, :max_age]
     end
     
-    test "重複するパラメータが正しく処理される", %{conn: conn} do
+    test "重複するパラメータが正しく処理される", %{conn: _conn} do
       sql = "SELECT * FROM users WHERE name = :name OR nickname = :name"
       driver = %Yesql.Driver.MSSQL{}
       

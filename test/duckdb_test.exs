@@ -3,7 +3,7 @@ defmodule DuckDBTest do
   import TestHelper
 
   # DuckDBが利用可能な場合のみテストを実行
-  @tag :skip_on_ci
+  @moduletag :skip_on_ci
 
   defmodule QueryDuckDB do
     use Yesql, driver: :duckdb
@@ -65,7 +65,7 @@ defmodule DuckDBTest do
   end
 
   describe "DuckDB driver" do
-    @tag :duckdb
+    @describetag :duckdb
     test "基本的なinsertとselect", %{conn: conn} do
       # データ挿入
       assert QueryDuckDB.insert_duck(conn, age: 5, name: "Donald") == {:ok, []}

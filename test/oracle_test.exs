@@ -89,7 +89,7 @@ defmodule YesqlOracleTest do
       assert count == 1
     end
     
-    test "パラメータが正しい順序で:1, :2...に置換される", %{conn: conn} do
+    test "パラメータが正しい順序で:1, :2...に置換される", %{conn: _conn} do
       # 複雑なクエリでパラメータの順序をテスト
       sql = "SELECT * FROM users WHERE age > :min_age AND name = :name AND age < :max_age"
       driver = %Yesql.Driver.Oracle{}
@@ -100,7 +100,7 @@ defmodule YesqlOracleTest do
       assert param_order == [:min_age, :name, :max_age]
     end
     
-    test "重複するパラメータが正しく処理される", %{conn: conn} do
+    test "重複するパラメータが正しく処理される", %{conn: _conn} do
       sql = "SELECT * FROM users WHERE name = :name OR nickname = :name"
       driver = %Yesql.Driver.Oracle{}
       
@@ -110,7 +110,7 @@ defmodule YesqlOracleTest do
       assert param_order == [:name]
     end
     
-    test "既存の:1形式のパラメータと名前付きパラメータが混在する場合", %{conn: conn} do
+    test "既存の:1形式のパラメータと名前付きパラメータが混在する場合", %{conn: _conn} do
       # Oracleでは:1形式と:name形式が混在することは推奨されないが、テストとして確認
       sql = "SELECT * FROM users WHERE id = :1 AND name = :name"
       driver = %Yesql.Driver.Oracle{}

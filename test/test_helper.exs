@@ -66,14 +66,14 @@ defmodule TestHelper do
     );
     """
 
-    Duckdbex.query!(conn, drop_sql, [])
-    Duckdbex.query!(conn, create_sql, [])
+    Duckdbex.query(conn, drop_sql, [])
+    Duckdbex.query(conn, create_sql, [])
     :ok
   end
   def create_ducks_duckdb_table(_), do: :skip
 
   def truncate_duckdb_ducks(%{duckdb: conn}) do
-    Duckdbex.query!(conn, "DELETE FROM ducks", [])
+    Duckdbex.query(conn, "DELETE FROM ducks", [])
     :ok
   end
   def truncate_duckdb_ducks(_), do: :skip

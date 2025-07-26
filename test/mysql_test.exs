@@ -79,7 +79,7 @@ defmodule YesqlMySQLTest do
       assert count == 1
     end
     
-    test "パラメータが正しい順序で置換される", %{conn: conn} do
+    test "パラメータが正しい順序で置換される", %{conn: _conn} do
       # 複雑なクエリでパラメータの順序をテスト
       sql = "SELECT * FROM users WHERE age > :min_age AND name = :name AND age < :max_age"
       driver = %Yesql.Driver.MySQL{}

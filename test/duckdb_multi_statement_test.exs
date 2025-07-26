@@ -33,7 +33,7 @@ defmodule DuckDBMultiStatementTest do
       """
       
       # 実行
-      assert {:ok, result} = Yesql.Driver.execute(driver, conn, sql, [csv_path])
+      assert {:ok, _result} = Yesql.Driver.execute(driver, conn, sql, [csv_path])
       
       # 結果確認
       {:ok, count_result} = Duckdbex.query(conn, "SELECT COUNT(*) as cnt FROM test_import", [])

@@ -65,8 +65,8 @@ defmodule Yesql.DriverTest do
     end
   end
 
-  @tag :duckdb
   describe "DuckDBドライバー" do
+    @describetag :duckdb
     setup do
       case System.get_env("DUCKDB_TEST") do
         "true" ->

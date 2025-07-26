@@ -23,7 +23,7 @@ defmodule Yesql.DriverFactoryTest do
     end
 
     test "不明なドライバー" do
-      assert {:error, :unknown_driver} = Yesql.DriverFactory.create(:mysql)
+      assert {:error, :unknown_driver} = Yesql.DriverFactory.create(:unknown_driver)
     end
   end
 
