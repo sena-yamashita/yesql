@@ -129,6 +129,9 @@ defmodule Yesql.Mixfile do
       # SQLite driver
       {:exqlite, "~> 0.13", optional: true},
 
+      # Parser generator
+      {:nimble_parsec, "~> 1.4", runtime: false},
+      
       # Development dependencies
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},
