@@ -7,7 +7,7 @@ defmodule PostgreSQLTest do
       {:ok, ctx} -> ctx
       _ -> 
         IO.puts("Skipping PostgreSQL tests - database connection failed")
-        :skip
+        {:ok, skip: true}
     end
   end
 

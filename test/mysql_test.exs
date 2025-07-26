@@ -22,11 +22,11 @@ defmodule YesqlMySQLTest do
           {:ok, conn: ctx.mysql}
         _ ->
           IO.puts "MySQLテストをスキップします - 接続失敗"
-          :skip
+          {:ok, skip: true}
       end
     else
       IO.puts "MySQLテストをスキップします。実行するには MYSQL_TEST=true を設定してください。"
-      :skip
+      {:ok, skip: true}
     end
   end
   

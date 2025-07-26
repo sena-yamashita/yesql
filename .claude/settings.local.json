@@ -55,7 +55,14 @@
       "Bash(DUCKDB_TEST=true mix test test/duckdb_streaming_test.exs --only streaming)",
       "Bash(grep:*)",
       "Bash(od:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git pull:*)",
+      "Bash(for file in test/postgresql_streaming_test.exs test/driver_cast_syntax_test.exs test/batch_test.exs test/driver_factory_test.exs test/driver_test.exs test/sqlite_test.exs)",
+      "Bash(do)",
+      "Bash(sed:*)",
+      "Bash(done)",
+      "Bash(CI=true mix test --exclude duckdb)",
+      "Bash(export CI=true)"
     ],
     "deny": []
   }

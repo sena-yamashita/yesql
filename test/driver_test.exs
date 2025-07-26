@@ -84,7 +84,7 @@ defmodule Yesql.DriverTest do
           
           {:ok, duckdb: conn, db: db}
         _ ->
-          :skip
+          {:ok, skip: true}
       end
     end
 

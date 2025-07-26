@@ -31,7 +31,7 @@ defmodule BatchTest do
         [conn: conn, driver: :postgrex]
         
       _ ->
-        :skip
+          {:ok, skip: true}
     end
   end
   

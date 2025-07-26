@@ -22,18 +22,18 @@ defmodule YesqlMSSQLTest do
           {:ok, conn: ctx.mssql}
         _ ->
           IO.puts "MSSQLテストをスキップします - 接続失敗"
-          :skip
+          {:ok, skip: true}
       end
     else
       IO.puts "MSSQLテストをスキップします。実行するには MSSQL_TEST=true を設定してください。"
-      :skip
+      {:ok, skip: true}
     end
   end
   
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      Tds.query!(context[:conn], "TRUNCATE TABLE users")
+      Tds.query!(context[:conn], "TRUNCATE TABLE users", [])
       
       # テストデータを挿入
       Tds.query!(context[:conn], 
@@ -95,7 +95,7 @@ defmodule YesqlMSSQLTest do
   describe "エラーハンドリング" do
     test "無効なクエリはエラーを返す", %{conn: conn} do
       # 存在しないテーブルへのクエリ
-      {:error, %Tds.Error{}} = Tds.query(conn, "SELECT * FROM nonexistent_table")
+      {:error, %Tds.Error{}} = Tds.query(conn, "SELECT * FROM nonexistent_table", [])
     end
   end
   

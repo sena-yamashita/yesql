@@ -18,7 +18,7 @@ defmodule Yesql.DriverFactoryTest do
         assert {:ok, driver} = Yesql.DriverFactory.create(:duckdb)
         assert %Yesql.Driver.DuckDB{} = driver
       else
-        :skip
+          {:ok, skip: true}
       end
     end
 

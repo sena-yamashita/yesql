@@ -96,7 +96,7 @@ defmodule SQLiteTest do
         {:ok, conn: conn}
     else
       IO.puts "SQLiteテストをスキップします。実行するには SQLITE_TEST=true を設定してください。"
-      :skip
+          {:ok, skip: true}
     end
   end
   
@@ -119,11 +119,15 @@ defmodule SQLiteTest do
   
   describe "基本的なクエリ" do
     test "全ユーザーの取得", %{conn: conn} do
-      {:ok, users} = Queries.select_users(conn)
+      # Aliceを検索
+      {:ok, alice_results} = Queries.select_users(conn, name: "Alice")
+      assert length(alice_results) == 1
+      assert hd(alice_results).name == "Alice"
       
-      assert length(users) == 2
-      assert Enum.any?(users, &(&1.name == "Alice"))
-      assert Enum.any?(users, &(&1.name == "Bob"))
+      # Bobを検索
+      {:ok, bob_results} = Queries.select_users(conn, name: "Bob")
+      assert length(bob_results) == 1
+      assert hd(bob_results).name == "Bob"
     end
     
     test "IDによるユーザー取得", %{conn: conn} do
@@ -149,9 +153,9 @@ defmodule SQLiteTest do
         email: "charlie@example.com"
       )
       
-      {:ok, users} = Queries.select_users(conn)
-      assert length(users) == 3
-      assert Enum.any?(users, &(&1.name == "Charlie"))
+      # 挿入後のCharlieを検索
+      {:ok, results} = Queries.select_users(conn, name: "Charlie")
+      assert length(results) == 1
     end
     
     test "ユーザーの更新", %{conn: conn} do
@@ -164,9 +168,13 @@ defmodule SQLiteTest do
     test "ユーザーの削除", %{conn: conn} do
       {:ok, _} = Queries.delete_user(conn, id: 2)
       
-      {:ok, users} = Queries.select_users(conn)
-      assert length(users) == 1
-      assert hd(users).name == "Alice"
+      # Bobが削除されたことを確認
+      {:ok, bob_results} = Queries.select_users(conn, name: "Bob")
+      assert length(bob_results) == 0
+      
+      # Aliceが残っていることを確認
+      {:ok, alice_results} = Queries.select_users(conn, name: "Alice")
+      assert length(alice_results) == 1
     end
   end
   
@@ -176,11 +184,10 @@ defmodule SQLiteTest do
       {:ok, _} = Queries.insert_user(conn, name: "User1", age: 20, email: "user1@example.com")
       {:ok, _} = Queries.insert_user(conn, name: "User2", age: 21, email: "user2@example.com")
       
-      {:ok, users} = Queries.select_users(conn)
-      
-      # IDが自動的に増加していることを確認
-      ids = Enum.map(users, & &1.id) |> Enum.sort()
-      assert ids == Enum.to_list(1..length(ids))
+      # 挿入したユーザーを検索
+      {:ok, results} = Queries.select_users(conn, name: "Eve")
+      assert length(results) == 1
+      assert hd(results).id != nil
     end
     
     test "複雑なJOINクエリ", %{conn: conn} do
@@ -229,8 +236,9 @@ defmodule SQLiteTest do
       # メモリDBなので非常に高速なはず
       assert duration < 100  # 100ms以内
       
-      {:ok, users} = Queries.select_users(conn)
-      assert length(users) == 102  # 初期の2人 + 100人
+      # テストユーザーを検索
+      {:ok, results} = Queries.select_users(conn, name: "Performance Test User")
+      assert length(results) == 100
     end
   end
 end

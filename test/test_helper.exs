@@ -1,4 +1,8 @@
-{:ok, _} = Application.ensure_all_started(:postgrex)
+# 必要なアプリケーションを起動（エラーが発生しても続行）
+case Application.ensure_all_started(:postgrex) do
+  {:ok, _} -> :ok
+  {:error, _} -> :ok
+end
 
 # DuckDBテストが有効な場合のみDuckDBexを起動
 if System.get_env("DUCKDB_TEST") == "true" do
@@ -9,18 +13,38 @@ ExUnit.start()
 
 defmodule TestHelper do
   def new_postgrex_connection(ctx) do
-    opts = [
+    # まずpostgresデータベースに接続してyesql_testデータベースを作成
+    setup_opts = [
       hostname: System.get_env("POSTGRES_HOST", "localhost"),
       username: System.get_env("POSTGRES_USER", "postgres"),
       password: System.get_env("POSTGRES_PASSWORD", "postgres"),
-      database: System.get_env("POSTGRES_DATABASE", "yesql_test"),
-      port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
-      name: Module.concat(ctx.module, Postgrex)
+      database: "postgres",
+      port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
     ]
-
-    case Postgrex.start_link(opts) do
-      {:ok, conn} -> 
-        {:ok, postgrex: conn}
+    
+    case Postgrex.start_link(setup_opts) do
+      {:ok, setup_conn} ->
+        # データベースが存在しない場合は作成
+        Postgrex.query(setup_conn, "CREATE DATABASE yesql_test", [])
+        GenServer.stop(setup_conn)
+        
+        # yesql_testデータベースに接続
+        opts = [
+          hostname: System.get_env("POSTGRES_HOST", "localhost"),
+          username: System.get_env("POSTGRES_USER", "postgres"),
+          password: System.get_env("POSTGRES_PASSWORD", "postgres"),
+          database: System.get_env("POSTGRES_DATABASE", "yesql_test"),
+          port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+          name: Module.concat(ctx.module, Postgrex)
+        ]
+        
+        case Postgrex.start_link(opts) do
+          {:ok, conn} -> 
+            {:ok, postgrex: conn}
+          {:error, _} ->
+            {:error, :connection_failed}
+        end
+        
       {:error, _} ->
         {:error, :connection_failed}
     end
@@ -38,13 +62,21 @@ defmodule TestHelper do
     );
     """
 
-    Postgrex.query!(ctx.postgrex, drop_sql, [])
-    Postgrex.query!(ctx.postgrex, create_sql, [])
-    :ok
+    case Postgrex.query(ctx[:postgrex], drop_sql, []) do
+      {:ok, _} -> :ok
+      {:error, _} -> :ok
+    end
+    
+    case Postgrex.query(ctx[:postgrex], create_sql, []) do
+      {:ok, _} -> :ok
+      {:error, reason} -> 
+        IO.puts("Failed to create cats table: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   def truncate_postgres_cats(ctx) do
-    Postgrex.query!(ctx.postgrex, "TRUNCATE cats", [])
+    Postgrex.query!(ctx[:postgrex], "TRUNCATE cats", [])
     :ok
   end
 
@@ -85,17 +117,36 @@ defmodule TestHelper do
 
   # MySQL helpers
   def new_mysql_connection(_ctx) do
-    opts = [
+    # まずデータベースなしで接続してyesql_testデータベースを作成
+    setup_opts = [
       hostname: System.get_env("MYSQL_HOST", "localhost"),
       username: System.get_env("MYSQL_USER", "root"),
       password: System.get_env("MYSQL_PASSWORD", "root"),
-      database: System.get_env("MYSQL_DATABASE", "yesql_test"),
       port: String.to_integer(System.get_env("MYSQL_PORT", "3306"))
     ]
-
-    case MyXQL.start_link(opts) do
-      {:ok, conn} -> 
-        {:ok, mysql: conn}
+    
+    case MyXQL.start_link(setup_opts) do
+      {:ok, setup_conn} ->
+        # データベースが存在しない場合は作成
+        MyXQL.query(setup_conn, "CREATE DATABASE IF NOT EXISTS yesql_test")
+        GenServer.stop(setup_conn)
+        
+        # yesql_testデータベースに接続
+        opts = [
+          hostname: System.get_env("MYSQL_HOST", "localhost"),
+          username: System.get_env("MYSQL_USER", "root"),
+          password: System.get_env("MYSQL_PASSWORD", "root"),
+          database: System.get_env("MYSQL_DATABASE", "yesql_test"),
+          port: String.to_integer(System.get_env("MYSQL_PORT", "3306"))
+        ]
+        
+        case MyXQL.start_link(opts) do
+          {:ok, conn} -> 
+            {:ok, mysql: conn}
+          {:error, _} ->
+            :skip
+        end
+        
       {:error, _} ->
         :skip
     end

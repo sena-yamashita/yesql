@@ -47,7 +47,7 @@ defmodule DriverCastSyntaxTest do
           create_cast_test_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -103,7 +103,7 @@ defmodule DriverCastSyntaxTest do
           create_duckdb_cast_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -124,7 +124,7 @@ defmodule DriverCastSyntaxTest do
           create_mysql_cast_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -148,7 +148,7 @@ defmodule DriverCastSyntaxTest do
           create_sqlite_cast_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -172,7 +172,7 @@ defmodule DriverCastSyntaxTest do
           create_mssql_cast_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -196,7 +196,7 @@ defmodule DriverCastSyntaxTest do
           create_oracle_cast_table(ctx)
           ctx
         _ -> 
-          :skip
+          {:ok, skip: true}
       end
     end
 
@@ -215,7 +215,8 @@ defmodule DriverCastSyntaxTest do
 
   # ヘルパー関数
 
-  defp create_cast_test_table(%{postgrex: conn}) do
+  defp create_cast_test_table(ctx) when is_list(ctx) do
+    conn = ctx[:postgrex]
     {:ok, _} = Postgrex.query(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id SERIAL PRIMARY KEY,
@@ -244,7 +245,8 @@ defmodule DriverCastSyntaxTest do
     :ok
   end
 
-  defp create_mysql_cast_table(%{mysql: conn}) do
+  defp create_mysql_cast_table(ctx) when is_list(ctx) do
+    conn = ctx[:mysql]
     MyXQL.query!(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -258,7 +260,8 @@ defmodule DriverCastSyntaxTest do
     :ok
   end
 
-  defp create_sqlite_cast_table(%{sqlite: conn}) do
+  defp create_sqlite_cast_table(ctx) when is_list(ctx) do
+    conn = ctx[:sqlite]
     Exqlite.Sqlite3.execute(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id INTEGER PRIMARY KEY,
@@ -272,7 +275,8 @@ defmodule DriverCastSyntaxTest do
     :ok
   end
 
-  defp create_mssql_cast_table(%{mssql: conn}) do
+  defp create_mssql_cast_table(ctx) when is_list(ctx) do
+    conn = ctx[:mssql]
     Tds.query!(conn, """
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='cast_test' AND xtype='U')
       CREATE TABLE cast_test (
@@ -281,16 +285,17 @@ defmodule DriverCastSyntaxTest do
         int_col INT,
         date_col DATE
       )
-    """)
+    """, [])
     
-    Tds.query!(conn, "TRUNCATE TABLE cast_test")
+    Tds.query!(conn, "TRUNCATE TABLE cast_test", [])
     :ok
   end
 
-  defp create_oracle_cast_table(%{oracle: conn}) do
+  defp create_oracle_cast_table(ctx) when is_list(ctx) do
+    conn = ctx[:oracle]
     # Oracleテーブル作成（エラーを無視）
     try do
-      Jamdb.Oracle.query!(conn, "DROP TABLE cast_test")
+      Jamdb.Oracle.query!(conn, "DROP TABLE cast_test", [])
     rescue
       _ -> :ok
     end
@@ -302,7 +307,7 @@ defmodule DriverCastSyntaxTest do
         int_col NUMBER,
         date_col DATE
       )
-    """)
+    """, [])
     
     :ok
   end

@@ -44,7 +44,7 @@ defmodule YesqlOracleTest do
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      Jamdb.Oracle.query!(context[:conn], "DELETE FROM users")
+      Jamdb.Oracle.query!(context[:conn], "DELETE FROM users", [])
       
       # テストデータを挿入
       Jamdb.Oracle.query!(context[:conn], 
@@ -55,7 +55,7 @@ defmodule YesqlOracleTest do
         "INSERT INTO users (id, name, age) VALUES (3, 'Charlie', 35)")
       
       # 変更をコミット
-      Jamdb.Oracle.query!(context[:conn], "COMMIT")
+      Jamdb.Oracle.query!(context[:conn], "COMMIT", [])
     end
     
     :ok
@@ -84,7 +84,7 @@ defmodule YesqlOracleTest do
       assert result.num_rows == 1
       
       # 挿入されたことを確認
-      %{rows: [[count]]} = Jamdb.Oracle.query!(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'")
+      %{rows: [[count]]} = Jamdb.Oracle.query!(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'", [])
       assert count == 1
     end
     
