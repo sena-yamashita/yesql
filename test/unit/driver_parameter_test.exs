@@ -3,6 +3,17 @@ defmodule Yesql.Unit.DriverParameterTest do
 
   @moduletag :unit
 
+  setup do
+    # 環境変数からトークナイザーを設定
+    case System.get_env("YESQL_TOKENIZER") do
+      "nimble" ->
+        Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
+      _ ->
+        Yesql.Config.put_tokenizer(Yesql.Tokenizer.Default)
+    end
+    :ok
+  end
+
   describe "PostgreSQL ドライバー（$1, $2形式）" do
     setup do
       {:ok, driver} = Yesql.DriverFactory.create(:postgrex)
@@ -321,18 +332,26 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "SELECT * FROM users -- :comment_param\nWHERE id = :id"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      # デフォルトトークナイザはコメント内も変換してしまう
-      # NimbleParsecは正しく処理する
-      assert converted =~ "WHERE id = $"
-      assert :id in params
+      # トークナイザによって動作が異なる
+      current_tokenizer = Yesql.Config.get_tokenizer()
+      
+      if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
+        # NimbleParsecはコメント行を完全に削除し、パラメータを無視する（正しい動作）
+        assert converted == "SELECT * FROM users WHERE id = $1"
+        assert params == [:id]
+      else
+        # デフォルトトークナイザはコメント内も変換してしまう（問題のある動作）
+        assert converted == "SELECT * FROM users -- $1\nWHERE id = $2"
+        assert params == [:comment_param, :id]
+      end
     end
 
     @tag :tokenizer_dependent
     test "複雑なキャスト構文", %{driver: driver} do
-      # PostgreSQLの ? 演算子は現在のトークナイザでは扱えないため、簡略化
       sql = "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = :name AND data @> :filter"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
+      # 両方のトークナイザーで正しく動作することを確認
       assert converted == "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = $1 AND data @> $2"
       assert params == [:name, :filter]
     end
@@ -363,6 +382,42 @@ defmodule Yesql.Unit.DriverParameterTest do
       # これは実行時に配列を展開する必要があるため、現在は未実装
       assert converted == "SELECT * FROM users WHERE id IN ($1)"
       assert params == [:ids]
+    end
+
+    @tag :tokenizer_dependent
+    test "複数行コメント内のパラメータ", %{driver: driver} do
+      sql = "SELECT * FROM users /* :comment_param1 :comment_param2 */ WHERE id = :id"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      current_tokenizer = Yesql.Config.get_tokenizer()
+      
+      if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
+        # NimbleParsecは複数行コメントを完全に削除し、パラメータを無視
+        assert converted == "SELECT * FROM users  WHERE id = $1"
+        assert params == [:id]
+      else
+        # デフォルトトークナイザは複数行コメント内も変換
+        assert converted == "SELECT * FROM users /* $1 $2 */ WHERE id = $3"
+        assert params == [:comment_param1, :comment_param2, :id]
+      end
+    end
+
+    @tag :tokenizer_dependent
+    test "MySQLスタイルコメント内のパラメータ", %{driver: driver} do
+      sql = "SELECT * FROM users # :comment_param\nWHERE id = :id"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      current_tokenizer = Yesql.Config.get_tokenizer()
+      
+      if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
+        # NimbleParsecはMySQLコメント行を完全に削除し、パラメータも無視
+        assert converted == "SELECT * FROM users WHERE id = $1"
+        assert params == [:id]
+      else
+        # デフォルトトークナイザはMySQLコメントを認識しない
+        assert converted == "SELECT * FROM users # $1\nWHERE id = $2"
+        assert params == [:comment_param, :id]
+      end
     end
   end
 end

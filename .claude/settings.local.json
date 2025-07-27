@@ -76,7 +76,9 @@
       "Bash(gh api:*)",
       "Bash(./test_all_drivers.exs)",
       "Bash(mix yesql.params:*)",
-      "Bash(MIX_ENV=test mix test.yesql.params --test)"
+      "Bash(MIX_ENV=test mix test.yesql.params --test)",
+      "Bash(YESQL_TOKENIZER=nimble mix test test/unit/driver_parameter_test.exs --only tokenizer_dependent)",
+      "Bash(YESQL_TOKENIZER=default mix test test/unit/driver_parameter_test.exs --only tokenizer_dependent)"
     ],
     "deny": []
   }
