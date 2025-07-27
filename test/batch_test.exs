@@ -44,6 +44,9 @@ defmodule BatchTest do
 
   describe "バッチクエリ実行" do
     test "複数クエリの成功実行", %{conn: conn, driver: driver} do
+      # テーブルをクリア
+      Postgrex.query!(conn, "TRUNCATE batch_test", [])
+      
       queries = [
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Item1", 100]},
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Item2", 200]},
