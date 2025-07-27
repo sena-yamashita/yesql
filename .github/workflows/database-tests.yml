@@ -124,10 +124,16 @@ jobs:
         elixir-version: '1.15.8'
         otp-version: '25.3'
     
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          deps
+          _build
+          ~/.cache/elixir_make
+        key: ${{ runner.os }}-mix-duckdb-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-duckdb-
     
     - name: Install dependencies
       run: |
@@ -135,9 +141,8 @@ jobs:
         mix local.rebar --force
         mix deps.get
     
-    - name: Compile DuckDBex NIF
-      run: |
-        mix deps.compile duckdbex --force
+    - name: Compile dependencies
+      run: mix deps.compile
     
     - name: Run DuckDB tests
       env:
@@ -159,11 +164,11 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
-          --health-start-period 10s
+          --health-start-period 30s
 
     steps:
     - uses: actions/checkout@v4
@@ -179,8 +184,9 @@ jobs:
     
     - name: Wait for MSSQL
       run: |
+        sudo apt-get update && sudo apt-get install -y mssql-tools18
         for i in {1..30}; do
-          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' && break
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No && break
           echo "Waiting for MSSQL to be ready..."
           sleep 2
         done

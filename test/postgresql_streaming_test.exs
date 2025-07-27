@@ -370,7 +370,7 @@ defmodule PostgreSQLStreamingTest do
 
       if result.rows == [[0]] do
         # バッチ挿入で10,000件のデータを作成
-        Enum.chunk_every(100..10000, 1000)
+        Enum.chunk_every(100..10099, 1000)
         |> Enum.each(fn chunk ->
           values =
             chunk
