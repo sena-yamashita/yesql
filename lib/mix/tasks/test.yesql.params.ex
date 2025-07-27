@@ -24,6 +24,9 @@ defmodule Mix.Tasks.Test.Yesql.Params do
       # トークナイザを指定
       mix test.yesql.params --tokenizer nimble --test
       mix test.yesql.params -t nimble "SELECT id::integer FROM users WHERE name = :name"
+      
+      # 全トークナイザでテスト
+      mix test.yesql.params --test-all
 
   ## オプション
 
@@ -33,6 +36,7 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     * `--format` - 出力形式 (pretty, simple, json)
     * `--test` - テストモード（既知の問題をスキップ）
     * `-t, --tokenizer` - トークナイザを指定 (default, nimble)
+    * `--test-all` - 全トークナイザでテストを実行
 
   ## 例
 
@@ -142,7 +146,8 @@ defmodule Mix.Tasks.Test.Yesql.Params do
         file: :string,
         format: :string,
         test: :boolean,
-        tokenizer: :string
+        tokenizer: :string,
+        test_all: :boolean
       ],
       aliases: [
         d: :driver,
@@ -163,6 +168,9 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     tokenizer = setup_tokenizer(opts[:tokenizer])
 
     cond do
+      opts[:test_all] ->
+        handle_test_all_mode(opts)
+        
       opts[:test] ->
         handle_test_mode(opts, tokenizer)
         
@@ -175,6 +183,101 @@ defmodule Mix.Tasks.Test.Yesql.Params do
       
       true ->
         handle_interactive_mode()
+    end
+  end
+
+  defp handle_test_all_mode(_opts) do
+    IO.puts("\n🧪 YesQL パラメータ変換テスト - 全トークナイザ")
+    IO.puts("=" <> String.duplicate("=", 60))
+    
+    tokenizers = [:default, :nimble]
+    
+    results = Enum.map(tokenizers, fn tokenizer_type ->
+      IO.puts("\n" <> String.duplicate("-", 60))
+      
+      # トークナイザを設定
+      case tokenizer_type do
+        :nimble -> Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
+        _ -> Yesql.Config.reset_tokenizer()
+      end
+      
+      IO.puts("トークナイザ: #{format_tokenizer_name(tokenizer_type)}")
+      IO.puts(String.duplicate("-", 60))
+      
+      # 基本テスト
+      basic_tests = [
+        {"単一パラメータ", "SELECT * FROM users WHERE id = :id"},
+        {"複数パラメータ", "SELECT * FROM users WHERE name = :name AND age > :age"},
+        {"同じパラメータの複数使用", "SELECT * FROM users WHERE created_at > :date AND updated_at < :date"},
+        {"ORDER BY句", "SELECT * FROM users ORDER BY :column"},
+        {"LIMIT句", "SELECT * FROM users LIMIT :limit OFFSET :offset"}
+      ]
+      
+      {passed, failed} = Enum.reduce(basic_tests, {0, 0}, fn {_name, sql}, {p, f} ->
+        try do
+          {converted, _params} = test_all_drivers(sql)
+          if Enum.all?(converted, fn {_, c} -> is_binary(c) end) do
+            {p + 1, f}
+          else
+            {p, f + 1}
+          end
+        rescue
+          _ -> {p, f + 1}
+        end
+      end)
+      
+      # 既知の問題
+      known_issues = Map.get(@known_issues, tokenizer_type, %{})
+      
+      {known_passed, known_failed, skipped} = 
+        Enum.reduce(known_issues, {0, 0, 0}, fn {_name, issue}, {kp, kf, s} ->
+          if issue.skip_reason do
+            {kp, kf, s + 1}
+          else
+            try do
+              {converted, _params} = test_all_drivers(issue.sql)
+              success = Enum.all?(converted, fn {_, c} -> is_binary(c) end)
+              
+              cond do
+                success and issue.expected_to_pass ->
+                  {kp + 1, kf, s}
+                not success and not issue.expected_to_pass ->
+                  {kp, kf + 1, s}  # 期待通りの失敗
+                success and not issue.expected_to_pass ->
+                  {kp + 1, kf, s}  # 想定外の成功
+                true ->
+                  {kp, kf + 1, s}  # 想定外の失敗
+              end
+            rescue
+              _ ->
+                if issue.expected_to_pass do
+                  {kp, kf + 1, s}
+                else
+                  {kp, kf + 1, s}
+                end
+            end
+          end
+        end)
+      
+      {tokenizer_type, passed, failed, known_passed, known_failed, skipped}
+    end)
+    
+    # サマリー表示
+    IO.puts("\n" <> String.duplicate("=", 60))
+    IO.puts("📊 テスト結果サマリー")
+    IO.puts(String.duplicate("=", 60))
+    IO.puts("\nトークナイザ      | 基本テスト | 既知の問題")
+    IO.puts(String.duplicate("-", 60))
+    
+    total_failed = Enum.reduce(results, 0, fn {tokenizer, passed, failed, known_passed, known_failed, skipped}, acc ->
+      IO.puts("#{format_tokenizer_name(tokenizer) |> String.pad_trailing(16)} | #{passed}/5 PASS | #{known_passed} PASS, #{known_failed} FAIL, #{skipped} SKIP")
+      acc + failed + (if tokenizer == :nimble, do: known_failed, else: 0)
+    end)
+    
+    IO.puts("\n✅ 全トークナイザテスト完了")
+    
+    if total_failed > 0 do
+      System.at_exit(fn _ -> exit({:shutdown, 1}) end)
     end
   end
 
