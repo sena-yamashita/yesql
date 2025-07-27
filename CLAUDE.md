@@ -223,6 +223,27 @@ mix docs
 iex -S mix
 ```
 
+### Docker環境でのテスト
+GitHub CIと同じ環境でローカルテストを実行：
+```bash
+# すべてのデータベースでテスト
+make test-all
+
+# 特定のデータベースでテスト
+make test-postgres
+make test-mysql
+make test-mssql
+make test-sqlite
+make test-duckdb
+
+# Docker環境の管理
+make docker-up     # サービス起動
+make docker-down   # サービス停止
+make docker-logs   # ログ表示
+```
+
+詳細は `docker/README.md` を参照。
+
 ### データベース設定
 テスト実行にはPostgreSQLデータベース `yesql_test` が必要です：
 ```bash

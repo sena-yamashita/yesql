@@ -21,3 +21,8 @@ erl_crash.dump
 
 # Dialyzer PLT cache
 /priv/plts/
+
+# Docker関連
+docker/.env
+docker/data/
+*.log
