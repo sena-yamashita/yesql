@@ -55,10 +55,8 @@ defmodule BatchTest do
       assert length(results) == 3
 
       # 結果を確認
-      {:ok, %{rows: rows}} =
-        Postgrex.query(conn, "SELECT name, value FROM batch_test ORDER BY id", [])
-
-      assert rows == [["Item1", 100], ["Item2", 200], ["Item3", 300]]
+      {:ok, result} = Postgrex.query(conn, "SELECT name, value FROM batch_test ORDER BY id", [])
+      assert result.rows == [["Item1", 100], ["Item2", 200], ["Item3", 300]]
     end
 
     test "トランザクション内でのエラー処理", %{conn: conn, driver: driver} do
