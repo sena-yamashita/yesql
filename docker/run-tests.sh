@@ -70,9 +70,17 @@ export MSSQL_DATABASE=master
 echo -e "\n${YELLOW}Installing dependencies...${NC}"
 mix deps.get
 
+# コンパイルしてテストサポートモジュールを利用可能にする
+echo -e "\n${YELLOW}Compiling project...${NC}"
+MIX_ENV=test mix compile
+
 # Ectoを使ったデータベースセットアップ
 echo -e "\n${YELLOW}Setting up databases with Ecto...${NC}"
-FULL_TEST=true mix run -e "Yesql.TestSetup.setup_all_databases()"
+FULL_TEST=true MIX_ENV=test mix run -e "
+Yesql.EctoTestHelper.ensure_database_exists(\"postgres\")
+Yesql.EctoTestHelper.ensure_database_exists(\"mysql\")
+Yesql.EctoTestHelper.ensure_database_exists(\"mssql\")
+"
 
 # テストの実行
 case "$TEST_TYPE" in
