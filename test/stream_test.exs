@@ -466,7 +466,7 @@ defmodule StreamTest do
   end
 
   defp setup_duckdb(conn) do
-    Duckdbex.query!(conn, """
+    {:ok, _} = Duckdbex.query(conn, """
     CREATE TABLE stream_test (
       id INTEGER PRIMARY KEY,
       value INTEGER,
@@ -523,8 +523,8 @@ defmodule StreamTest do
 
     Enum.each(1..count, fn i ->
       Exqlite.Sqlite3.bind(statement, [i, "Data for row #{i}"])
-      Exqlite.Sqlite3.step!(conn, statement)
-      Exqlite.Sqlite3.reset!(conn, statement)
+      {:ok, :done} = Exqlite.Sqlite3.step(conn, statement)
+      :ok = Exqlite.Sqlite3.reset(conn, statement)
     end)
 
     Exqlite.Sqlite3.release(conn, statement)
@@ -538,7 +538,7 @@ defmodule StreamTest do
       |> Enum.map(fn i -> "(#{i}, #{i}, 'Data for row #{i}')" end)
       |> Enum.join(",")
 
-    Duckdbex.query!(conn, "INSERT INTO stream_test VALUES #{values}")
+    {:ok, _} = Duckdbex.query(conn, "INSERT INTO stream_test VALUES #{values}")
   end
 
   defp setup_mssql(conn) do
@@ -575,7 +575,7 @@ defmodule StreamTest do
     )
 
     # テーブルを作成
-    Jamdb.Oracle.query!(
+    {:ok, _} = Jamdb.Oracle.query(
       conn,
       """
       CREATE TABLE stream_test (
@@ -618,7 +618,7 @@ defmodule StreamTest do
         |> Enum.map(fn i -> "INTO stream_test VALUES (#{i}, #{i}, 'Data for row #{i}')" end)
         |> Enum.join("\n")
 
-      Jamdb.Oracle.query!(
+      {:ok, _} = Jamdb.Oracle.query(
         conn,
         """
         INSERT ALL
@@ -630,7 +630,7 @@ defmodule StreamTest do
     end)
 
     # コミット
-    Jamdb.Oracle.query!(conn, "COMMIT", [])
+    {:ok, _} = Jamdb.Oracle.query(conn, "COMMIT", [])
   end
 
   # DuckDB

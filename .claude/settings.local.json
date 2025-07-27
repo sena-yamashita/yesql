@@ -79,7 +79,10 @@
       "Bash(MIX_ENV=test mix test.yesql.params --test)",
       "Bash(YESQL_TOKENIZER=nimble mix test test/unit/driver_parameter_test.exs --only tokenizer_dependent)",
       "Bash(YESQL_TOKENIZER=default mix test test/unit/driver_parameter_test.exs --only tokenizer_dependent)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": []
   }

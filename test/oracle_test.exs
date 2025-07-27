@@ -44,26 +44,29 @@ defmodule YesqlOracleTest do
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      Jamdb.Oracle.query!(context[:conn], "DELETE FROM users", [])
+      {:ok, _} = Jamdb.Oracle.query(context[:conn], "DELETE FROM users", [])
 
       # テストデータを挿入
-      Jamdb.Oracle.query!(
+      {:ok, _} = Jamdb.Oracle.query(
         context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25)"
+        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25)",
+        []
       )
 
-      Jamdb.Oracle.query!(
+      {:ok, _} = Jamdb.Oracle.query(
         context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (2, 'Bob', 30)"
+        "INSERT INTO users (id, name, age) VALUES (2, 'Bob', 30)",
+        []
       )
 
-      Jamdb.Oracle.query!(
+      {:ok, _} = Jamdb.Oracle.query(
         context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (3, 'Charlie', 35)"
+        "INSERT INTO users (id, name, age) VALUES (3, 'Charlie', 35)",
+        []
       )
 
       # 変更をコミット
-      Jamdb.Oracle.query!(context[:conn], "COMMIT", [])
+      {:ok, _} = Jamdb.Oracle.query(context[:conn], "COMMIT", [])
     end
 
     :ok
@@ -92,8 +95,8 @@ defmodule YesqlOracleTest do
       assert result.num_rows == 1
 
       # 挿入されたことを確認
-      %{rows: [[count]]} =
-        Jamdb.Oracle.query!(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'", [])
+      {:ok, %{rows: [[count]]}} =
+        Jamdb.Oracle.query(conn, "SELECT COUNT(*) FROM users WHERE name = 'David'", [])
 
       assert count == 1
     end
@@ -143,13 +146,13 @@ defmodule YesqlOracleTest do
   defp setup_database(conn) do
     # テーブルが存在する場合は削除
     try do
-      Jamdb.Oracle.query!(conn, "DROP TABLE users")
+      {:ok, _} = Jamdb.Oracle.query(conn, "DROP TABLE users")
     rescue
       _ -> :ok
     end
 
     # テーブル作成
-    Jamdb.Oracle.query!(conn, """
+    {:ok, _} = Jamdb.Oracle.query(conn, """
       CREATE TABLE users (
         id NUMBER(10) PRIMARY KEY,
         name VARCHAR2(255) NOT NULL,
@@ -158,6 +161,6 @@ defmodule YesqlOracleTest do
     """)
 
     # 変更をコミット
-    Jamdb.Oracle.query!(conn, "COMMIT", [])
+    {:ok, _} = Jamdb.Oracle.query(conn, "COMMIT", [])
   end
 end

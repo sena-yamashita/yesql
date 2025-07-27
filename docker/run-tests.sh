@@ -40,8 +40,8 @@ until docker exec yesql_mysql mysqladmin ping -h localhost --silent; do
 done
 echo -e "${GREEN}MySQL is ready!${NC}"
 
-# MSSQL
-until docker exec yesql_mssql /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' > /dev/null 2>&1; do
+# MSSQL - tools18を使用し、-Cオプションで証明書検証をスキップ
+until docker exec yesql_mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -C > /dev/null 2>&1; do
   echo "Waiting for MSSQL..."
   sleep 2
 done

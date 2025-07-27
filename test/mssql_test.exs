@@ -34,7 +34,7 @@ defmodule YesqlMSSQLTest do
   setup context do
     if context[:conn] do
       # 各テストの前にテーブルをクリア
-      Tds.query!(context[:conn], "TRUNCATE TABLE users", [])
+      Tds.query!(context[:conn], "TRUNCATE TABLE users")
 
       # テストデータを挿入
       Tds.query!(

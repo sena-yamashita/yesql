@@ -332,12 +332,12 @@ defmodule DriverCastSyntaxTest do
     conn = ctx[:oracle]
     # Oracleテーブル作成（エラーを無視）
     try do
-      Jamdb.Oracle.query!(conn, "DROP TABLE cast_test", [])
+      {:ok, _} = Jamdb.Oracle.query(conn, "DROP TABLE cast_test", [])
     rescue
       _ -> :ok
     end
 
-    Jamdb.Oracle.query!(
+    {:ok, _} = Jamdb.Oracle.query(
       conn,
       """
         CREATE TABLE cast_test (
