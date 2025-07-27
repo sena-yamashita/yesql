@@ -545,6 +545,39 @@ mix test.mssql
 ORACLE_TEST=true ORACLE_PASSWORD=password mix test test/oracle_test.exs
 ```
 
+### 全ドライバーの一括テスト
+
+全てのドライバーをまとめてテストする便利なコマンド：
+
+```sh
+# 全ドライバーを順次テスト
+mix test.drivers
+
+# 特定のドライバーのみテスト
+mix test.drivers postgresql duckdb
+
+# 並列実行（高速）
+mix test.drivers --parallel
+
+# 利用可能なドライバー一覧を表示
+mix test.drivers --list
+
+# エイリアスを使用
+mix test.all
+```
+
+または、スタンドアロンスクリプトとして：
+
+```sh
+# 実行権限を付与（初回のみ）
+chmod +x test_all_drivers.exs
+
+# 全ドライバーテストを実行
+./test_all_drivers.exs
+```
+
+テスト結果のサマリーが表示され、各ドライバーの成功/失敗状態が一目で確認できます。
+
 ### 環境変数について
 
 テスト実行時、特定のドライバーのテストは環境変数の設定が必要です。

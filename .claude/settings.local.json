@@ -72,7 +72,11 @@
       "Bash(DUCKDB_TEST=true mix test test/driver_test.exs:113 --trace)",
       "Bash(DUCKDB_TEST=true mix test test/driver_test.exs:113 --include duckdb --trace)",
       "Bash(mix format)",
-      "Bash(export DUCKDB_TEST=true)"
+      "Bash(export DUCKDB_TEST=true)",
+      "Bash(gh api:*)",
+      "Bash(./test_all_drivers.exs)",
+      "Bash(mix yesql.params:*)",
+      "Bash(MIX_ENV=test mix test.yesql.params --test)"
     ],
     "deny": []
   }

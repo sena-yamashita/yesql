@@ -49,9 +49,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - test: テストの追加や修正
 - chore: ビルドプロセスやツールの変更
 
-### 自動プッシュ
-- コミット後、必ず自動的にpushを実行
-- 外部プロジェクトから依存関係として参照される可能性があるため、常に最新の状態を保つ
+### プッシュのタイミング
+- **重要**: 自動的にプッシュしない
+- ユーザーから明示的にプッシュの指示があった場合のみ実行
+- CI/CDの負荷を考慮し、プッシュのタイミングはユーザーが制御
 
 ## 作業管理
 
@@ -227,6 +228,29 @@ iex -S mix
 ```bash
 createdb yesql_test
 ```
+
+### GitHub CI確認方法
+
+GitHub Actionsの実行状態を確認する際は、必ず`gh`コマンドを使用してください：
+
+```bash
+# 最近の実行状態を確認
+gh api repos/sena-yamashita/yesql/actions/runs --jq '.workflow_runs[:5] | .[] | {id: .id, status: .status, conclusion: .conclusion, created_at: .created_at, name: .name}'
+
+# 特定の実行の詳細を確認
+gh run view <run_id>
+
+# 失敗したジョブのログを確認
+gh run view <run_id> --log-failed
+
+# ワークフローの一覧を確認
+gh workflow list
+
+# 特定のワークフローの実行履歴
+gh run list --workflow=<workflow_name>
+```
+
+**重要**: WebブラウザやWebSearchツールではなく、必ず`gh`コマンドを使用すること。これにより正確な情報を取得できます。
 
 ## 技術詳細
 

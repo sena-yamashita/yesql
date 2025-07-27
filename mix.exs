@@ -21,7 +21,17 @@ defmodule Yesql.Mixfile do
         links: %{"GitHub" => "https://github.com/lpil/yesql"},
         files: ~w(LICENCE README.md lib src mix.exs)
       ],
-      aliases: aliases()
+      aliases: aliases(),
+      preferred_cli_env: [
+        "test.drivers": :test,
+        "test.all": :test,
+        "test.postgres": :test,
+        "test.mysql": :test,
+        "test.mssql": :test,
+        "test.duckdb": :test,
+        "test.oracle": :test,
+        "test.yesql.params": :test
+      ]
     ]
   end
 
@@ -105,6 +115,9 @@ defmodule Yesql.Mixfile do
       "test.mysql": ["cmd FULL_TEST=true MYSQL_TEST=true mix test --only mysql"],
       "test.mssql": ["cmd FULL_TEST=true MSSQL_TEST=true mix test --only mssql"],
       "test.duckdb": ["cmd DUCKDB_TEST=true mix test --only duckdb"],
+      
+      # ドライバーテスト管理
+      "test.all": ["test.drivers"],
 
       # Watch mode for unit tests
       "test.watch.unit": ["test.watch --only unit"]
