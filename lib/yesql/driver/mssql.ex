@@ -31,7 +31,15 @@ defmodule Yesql.Driver.MSSQL do
       MSSQLクエリを実行します。
       """
       def execute(_driver, conn, sql, params) do
-        case Tds.query(conn, sql, params) do
+        # Tdsはパラメータを%Tds.Parameter{}構造体のリストとして期待
+        # @1, @2... 形式の名前付きパラメータを使用
+        tds_params = params
+        |> Enum.with_index(1)
+        |> Enum.map(fn {value, index} ->
+          %Tds.Parameter{name: "@#{index}", value: value}
+        end)
+        
+        case Tds.query(conn, sql, tds_params) do
           {:ok, result} ->
             {:ok, result}
 
@@ -41,19 +49,20 @@ defmodule Yesql.Driver.MSSQL do
       end
 
       @doc """
-      名前付きパラメータをMSSQLの名前付きパラメータ（@p1, @p2...）に変換します。
+      名前付きパラメータをTdsライブラリが期待する形式（@1, @2...）に変換します。
+      TdsライブラリはSQL Server標準の@付き名前付きパラメータを使用します。
 
       ## 例
 
           convert_params(driver, "SELECT * FROM users WHERE name = :name AND age = :age", 
                         [name: "Alice", age: 30])
-          # => {"SELECT * FROM users WHERE name = @p1 AND age = @p2", ["Alice", 30]}
+          # => {"SELECT * FROM users WHERE name = @1 AND age = @2", [:name, :age]}
       """
       def convert_params(_driver, sql, _param_spec) do
         # 設定されたトークナイザーを使用してSQLトークンを解析
         with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
-          # MSSQLの@p1, @p2...形式に変換
-          format_param = fn _param, index -> "@p#{index}" end
+          # Tdsライブラリが期待する@1, @2...形式に変換
+          format_param = fn _param, index -> "@#{index}" end
           Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
         end
       end
@@ -61,11 +70,8 @@ defmodule Yesql.Driver.MSSQL do
       @doc """
       MSSQL結果セットを標準形式に変換します。
       """
-      def process_result(_driver, %Tds.Result{columns: nil, rows: nil}) do
-        {:ok, []}
-      end
-
-      def process_result(_driver, %Tds.Result{columns: columns, rows: rows}) when is_list(rows) do
+      # SELECTクエリで行が返される場合
+      def process_result(_driver, {:ok, %Tds.Result{columns: columns, rows: rows}}) when is_list(columns) and is_list(rows) do
         # カラム名を文字列からアトムに変換
         column_atoms = Enum.map(columns, &String.to_atom/1)
 
@@ -79,8 +85,9 @@ defmodule Yesql.Driver.MSSQL do
         {:ok, result}
       end
 
-      def process_result(_driver, %Tds.Result{} = result) do
-        # INSERT/UPDATE/DELETEなどの結果
+      # INSERT/UPDATE/DELETEなどで行が返されない場合
+      def process_result(_driver, {:ok, %Tds.Result{} = result}) do
+        # Tds.Result構造体をそのまま返す
         {:ok, result}
       end
 

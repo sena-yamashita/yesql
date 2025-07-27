@@ -126,7 +126,7 @@ defmodule Yesql.Unit.DriverParameterTest do
     end
   end
 
-  describe "MSSQL ドライバー（@p1, @p2形式）" do
+  describe "MSSQL ドライバー（@1, @2形式）" do
     setup do
       {:ok, driver} = Yesql.DriverFactory.create(:mssql)
       {:ok, driver: driver}
@@ -136,7 +136,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "SELECT * FROM users WHERE id = :id"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      assert converted == "SELECT * FROM users WHERE id = @p1"
+      assert converted == "SELECT * FROM users WHERE id = @1"
       assert params == [:id]
     end
 
@@ -144,7 +144,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "SELECT * FROM users WHERE name = :name AND age > :age"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      assert converted == "SELECT * FROM users WHERE name = @p1 AND age > @p2"
+      assert converted == "SELECT * FROM users WHERE name = @1 AND age > @2"
       assert params == [:name, :age]
     end
 
@@ -152,7 +152,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "SELECT * FROM users WHERE created_at > :date OR updated_at > :date"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      assert converted == "SELECT * FROM users WHERE created_at > @p1 OR updated_at > @p1"
+      assert converted == "SELECT * FROM users WHERE created_at > @1 OR updated_at > @1"
       assert params == [:date]
     end
 
@@ -160,7 +160,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "SELECT CAST(:value AS VARCHAR(100)), CONVERT(INT, :number)"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      assert converted == "SELECT CAST(@p1 AS VARCHAR(100)), CONVERT(INT, @p2)"
+      assert converted == "SELECT CAST(@1 AS VARCHAR(100)), CONVERT(INT, @2)"
       assert params == [:value, :number]
     end
 
@@ -168,7 +168,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       sql = "EXEC sp_GetUsersByAgeRange @MinAge = :min_age, @MaxAge = :max_age"
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
-      assert converted == "EXEC sp_GetUsersByAgeRange @MinAge = @p1, @MaxAge = @p2"
+      assert converted == "EXEC sp_GetUsersByAgeRange @MinAge = @1, @MaxAge = @2"
       assert params == [:min_age, :max_age]
     end
   end

@@ -1,3 +1,3 @@
 -- 新しいユーザーを挿入
-INSERT INTO users (name, age)
-VALUES (:name, :age)
+INSERT INTO users (id, name, age)
+VALUES (4, :name, :age)

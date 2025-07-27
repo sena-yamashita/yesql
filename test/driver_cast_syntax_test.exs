@@ -180,17 +180,26 @@ defmodule DriverCastSyntaxTest do
 
     @tag :sqlite
     test "SQLiteのCAST関数", %{sqlite: conn} do
+      # 追加のテストデータを挿入
+      {:ok, _} = Exqlite.query(conn, """
+        INSERT INTO cast_test (id, text_col, int_col, real_col)
+        VALUES (2, '456', 789, 456.78)
+      """)
+      
       # SQLiteもCAST関数を使用
       {:ok, results} =
         SQLiteQuery.sqlite_cast(conn,
           text_value: "123",
-          int_value: 456,
-          real_value: 123.45,
-          # 型親和性テスト用のパラメータ
-          value: "test"
+          int_value: 400,  # 456より小さい値を指定
+          real_value: 100.0  # 123.45より小さい値を指定
         )
 
-      assert length(results) > 0
+      assert length(results) >= 1
+      
+      # 最初の結果を確認
+      first = hd(results)
+      assert first[:text_to_int] == 123
+      assert first[:int_to_text] == "456"
     end
   end
 
@@ -208,15 +217,30 @@ defmodule DriverCastSyntaxTest do
 
     @tag :mssql
     test "MSSQLのCAST/CONVERT", %{mssql: conn} do
+      # 追加のテストデータを挿入
+      Tds.query!(
+        conn,
+        """
+        INSERT INTO cast_test (text_col, int_col, date_col)
+        VALUES ('456', 789, '2024-02-01')
+        """,
+        []
+      )
+      
       # MSSQLはCASTとCONVERTの両方をサポート
       {:ok, results} =
         MSSQLQuery.mssql_cast(conn,
           text_value: "123",
-          int_value: 456,
-          date_value: ~D[2024-01-01]
+          int_value: 400,  # 456より小さい値
+          date_value: ~D[2023-12-31]  # 2024-01-01より前の日付
         )
 
-      assert length(results) > 0
+      assert length(results) >= 1
+      
+      # 最初の結果を確認
+      first = hd(results)
+      assert first[:text_to_int] == 123
+      assert first[:int_to_text] == "456"
     end
   end
 
@@ -309,7 +333,7 @@ defmodule DriverCastSyntaxTest do
   defp create_sqlite_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:sqlite]
 
-    Exqlite.Sqlite3.execute(conn, """
+    {:ok, _} = Exqlite.query(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id INTEGER PRIMARY KEY,
         text_col TEXT,
@@ -318,7 +342,14 @@ defmodule DriverCastSyntaxTest do
       )
     """)
 
-    Exqlite.Sqlite3.execute(conn, "DELETE FROM cast_test")
+    {:ok, _} = Exqlite.query(conn, "DELETE FROM cast_test")
+    
+    # テストデータを挿入
+    {:ok, _} = Exqlite.query(conn, """
+      INSERT INTO cast_test (id, text_col, int_col, real_col)
+      VALUES (1, '123', 456, 123.45)
+    """)
+    
     :ok
   end
 
@@ -340,6 +371,17 @@ defmodule DriverCastSyntaxTest do
     )
 
     Tds.query!(conn, "TRUNCATE TABLE cast_test", [])
+    
+    # テストデータを挿入
+    Tds.query!(
+      conn,
+      """
+      INSERT INTO cast_test (text_col, int_col, date_col)
+      VALUES ('123', 456, '2024-01-01')
+      """,
+      []
+    )
+    
     :ok
   end
 

@@ -211,18 +211,42 @@ defmodule TestHelper do
   def create_mysql_test_table(_), do: :skip
 
   # MSSQL helpers
-  def new_mssql_connection(_ctx) do
-    opts = [
+  def new_mssql_connection(ctx) do
+    # まずmasterデータベースに接続してyesql_testデータベースを作成
+    setup_opts = [
       hostname: System.get_env("MSSQL_HOST", "localhost"),
       username: System.get_env("MSSQL_USER", "sa"),
-      password: System.get_env("MSSQL_PASSWORD", "YourStrong!Passw0rd"),
-      database: System.get_env("MSSQL_DATABASE", "yesql_test"),
+      password: System.get_env("MSSQL_PASSWORD", "YourStrong@Passw0rd"),
+      database: "master",
       port: String.to_integer(System.get_env("MSSQL_PORT", "1433"))
     ]
 
-    case Tds.start_link(opts) do
-      {:ok, conn} ->
-        {:ok, mssql: conn}
+    case Tds.start_link(setup_opts) do
+      {:ok, setup_conn} ->
+        # データベースが存在しない場合は作成
+        Tds.query(setup_conn, """
+          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
+          CREATE DATABASE yesql_test
+        """, [])
+        GenServer.stop(setup_conn)
+
+        # yesql_testデータベースに接続
+        opts = [
+          hostname: System.get_env("MSSQL_HOST", "localhost"),
+          username: System.get_env("MSSQL_USER", "sa"),
+          password: System.get_env("MSSQL_PASSWORD", "YourStrong@Passw0rd"),
+          database: System.get_env("MSSQL_DATABASE", "yesql_test"),
+          port: String.to_integer(System.get_env("MSSQL_PORT", "1433")),
+          name: Module.concat(ctx.module, MSSQL)
+        ]
+
+        case Tds.start_link(opts) do
+          {:ok, conn} ->
+            {:ok, mssql: conn}
+
+          {:error, _} ->
+            :skip
+        end
 
       {:error, _} ->
         :skip

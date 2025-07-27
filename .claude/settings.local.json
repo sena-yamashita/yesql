@@ -114,7 +114,11 @@
       "Bash(source:*)",
       "Bash(MYSQL_TEST=true mix test test/mysql_test.exs --trace)",
       "Bash(MYSQL_TEST=true mix test test/mysql_test.exs)",
-      "Bash(for:*)"
+      "Bash(for:*)",
+      "Bash(MSSQL_TEST=true mix test test/mssql_test.exs)",
+      "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182 -t trace)",
+      "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182 --trace)",
+      "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182)"
     ],
     "deny": []
   }

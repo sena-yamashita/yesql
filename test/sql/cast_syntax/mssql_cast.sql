@@ -7,4 +7,4 @@ SELECT
 FROM cast_test
 WHERE text_col = CAST(:text_value AS NVARCHAR(255))
   AND int_col > CAST(:int_value AS INT)
-  AND date_col = CAST(:date_value AS DATE)
+  AND date_col > CAST(:date_value AS DATE)
