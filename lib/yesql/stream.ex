@@ -170,66 +170,31 @@ defmodule Yesql.Stream do
   defp supports_streaming?(_), do: false
 
   defp create_stream(%Yesql.Driver.Postgrex{} = _driver, conn, sql, params, chunk_size, _opts) do
-    try do
-      module = Module.concat(Yesql.Stream, PostgrexStream)
-      module.create(conn, sql, params, chunk_size: chunk_size)
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.PostgrexStream.create_simple(conn, sql, params, chunk_size: chunk_size)
   end
 
   defp create_stream(%Yesql.Driver.MySQL{} = _driver, conn, sql, params, chunk_size, _opts) do
-    try do
-      module = Module.concat(Yesql.Stream, MySQLStream)
-      module.create(conn, sql, params, chunk_size: chunk_size)
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.MySQLStream.create(conn, sql, params, chunk_size: chunk_size)
   end
 
   defp create_stream(%Yesql.Driver.DuckDB{} = _driver, conn, sql, params, chunk_size, _opts) do
-    try do
-      module = Module.concat(Yesql.Stream, DuckDBStream)
-      module.create(conn, sql, params, chunk_size: chunk_size)
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.DuckDBStream.create(conn, sql, params, chunk_size: chunk_size)
   end
 
   defp create_stream(%Yesql.Driver.SQLite{} = _driver, conn, sql, params, chunk_size, _opts) do
-    try do
-      module = Module.concat(Yesql.Stream, SQLiteStream)
-      module.create(conn, sql, params, chunk_size: chunk_size)
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.SQLiteStream.create(conn, sql, params, chunk_size: chunk_size)
   end
 
   defp create_stream(%Yesql.Driver.MSSQL{} = _driver, conn, sql, params, chunk_size, opts) do
-    try do
-      module = Module.concat(Yesql.Stream, MSSQLStream)
-      module.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.MSSQLStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
   end
 
   defp create_stream(%Yesql.Driver.Oracle{} = _driver, conn, sql, params, chunk_size, opts) do
-    try do
-      module = Module.concat(Yesql.Stream, OracleStream)
-      module.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.OracleStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
   end
 
   defp create_stream(%Yesql.Driver.Ecto{} = _driver, conn, sql, params, _chunk_size, opts) do
-    try do
-      module = Module.concat(Yesql.Stream, EctoStream)
-      module.create(conn, sql, params, opts)
-    rescue
-      _ -> {:error, :streaming_module_not_available}
-    end
+    Yesql.Stream.EctoStream.create(conn, sql, params, opts)
   end
 
   defp create_stream(_, _, _, _, _, _) do

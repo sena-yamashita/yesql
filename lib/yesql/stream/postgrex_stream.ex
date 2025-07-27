@@ -6,46 +6,129 @@ if Code.ensure_loaded?(Postgrex) do
     Postgrexの`stream/4`機能を使用して、大量のデータを効率的に処理します。
     """
 
-    # alias Yesql.Driver  # 未使用のため一時的にコメントアウト
-
     @doc """
     PostgreSQL用のストリームを作成
 
     ## オプション
 
       * `:max_rows` - 一度に取得する最大行数（デフォルト: 500）
+      * `:chunk_size` - チャンクサイズ（max_rowsのエイリアス）
       * `:decode_mapper` - カスタムデコーダー（省略可）
       * `:mode` - `:text`または`:binary`（デフォルト: `:text`）
     """
     def create(conn, sql, params, opts \\ []) do
       max_rows = Keyword.get(opts, :max_rows, 500)
+      chunk_size = Keyword.get(opts, :chunk_size, max_rows)
 
-      # mode = Keyword.get(opts, :mode, :text)  # 未使用のため一時的にコメントアウト
-
-      # Postgrexのトランザクション内でストリームを作成
-      transaction_result =
-        Postgrex.transaction(conn, fn tx_conn ->
-          # CURSORを使用したストリーミング
+      # カーソルベースのストリーミングを実装
+      stream = Stream.resource(
+        # 初期化
+        fn -> 
+          # 一意のカーソル名を生成
           cursor_name = "yesql_cursor_#{:erlang.unique_integer([:positive])}"
+          {:start, conn, cursor_name, sql, params, chunk_size}
+        end,
+        
+        # 次の要素を取得
+        fn
+          {:start, conn, cursor_name, sql, params, chunk_size} ->
+            # トランザクションを開始してカーソルを宣言
+            case Postgrex.transaction(conn, fn tx_conn ->
+              declare_sql = "DECLARE #{cursor_name} CURSOR FOR #{sql}"
+              
+              case Postgrex.query(tx_conn, declare_sql, params) do
+                {:ok, _} ->
+                  # 最初のフェッチ
+                  fetch_rows(tx_conn, cursor_name, chunk_size)
+                  
+                {:error, _} = error ->
+                  error
+              end
+            end) do
+              {:ok, {:ok, rows}} ->
+                {rows, {:fetching, conn, cursor_name, chunk_size}}
+                
+              {:ok, {:error, _}} ->
+                {:halt, :error}
+                
+              {:error, _} ->
+                {:halt, :error}
+            end
+            
+          {:fetching, conn, cursor_name, chunk_size} ->
+            # 続きのデータをフェッチ
+            case Postgrex.transaction(conn, fn tx_conn ->
+              fetch_rows(tx_conn, cursor_name, chunk_size)
+            end) do
+              {:ok, {:ok, []}} ->
+                # データの終わり
+                {:halt, {:done, conn, cursor_name}}
+                
+              {:ok, {:ok, rows}} ->
+                {rows, {:fetching, conn, cursor_name, chunk_size}}
+                
+              _ ->
+                {:halt, {:error, conn, cursor_name}}
+            end
+            
+          _ ->
+            {:halt, :done}
+        end,
+        
+        # クリーンアップ
+        fn 
+          {:done, conn, cursor_name} ->
+            # カーソルをクローズ
+            Postgrex.transaction(conn, fn tx_conn ->
+              Postgrex.query(tx_conn, "CLOSE #{cursor_name}", [])
+            end)
+            :ok
+            
+          {:error, conn, cursor_name} ->
+            # エラー時もカーソルをクローズ
+            try do
+              Postgrex.transaction(conn, fn tx_conn ->
+                Postgrex.query(tx_conn, "CLOSE #{cursor_name}", [])
+              end)
+            rescue
+              _ -> :ok
+            end
+            :ok
+            
+          _ ->
+            :ok
+        end
+      )
+      
+      {:ok, stream}
+    end
 
-          # CURSORを宣言
-          declare_sql = "DECLARE #{cursor_name} CURSOR FOR #{sql}"
+    @doc """
+    Postgrexの標準stream関数を使用したシンプルな実装
 
-          case Postgrex.query(tx_conn, declare_sql, params) do
-            {:ok, _} ->
-              # ストリームを作成
-              stream = create_cursor_stream(tx_conn, cursor_name, max_rows)
-              {:ok, stream}
-
-            error ->
-              error
-          end
-        end)
-
-      case transaction_result do
-        {:ok, {:ok, stream}} -> {:ok, stream}
-        {:ok, error} -> error
-        error -> error
+    トランザクション内で実行する必要があります。
+    """
+    def create_simple(conn, sql, params, opts \\ []) do
+      chunk_size = Keyword.get(opts, :chunk_size, 500)
+      
+      # 単純なクエリ実行（非ストリーミング）
+      case Postgrex.query(conn, sql, params) do
+        {:ok, %Postgrex.Result{rows: rows, columns: columns}} ->
+          atom_columns = Enum.map(columns, &String.to_atom/1)
+          
+          # ストリームとして返す
+          stream = Stream.map(rows, fn row ->
+            atom_columns
+            |> Enum.zip(row)
+            |> Enum.into(%{})
+          end)
+          |> Stream.chunk_every(chunk_size)
+          |> Stream.flat_map(&Function.identity/1)
+          
+          {:ok, stream}
+          
+        {:error, _} = error ->
+          error
       end
     end
 
@@ -71,8 +154,8 @@ if Code.ensure_loaded?(Postgrex) do
 
               send(parent, {ref, :done})
 
-            {:error, reason} ->
-              send(parent, {ref, :error, reason})
+            error ->
+              send(parent, {ref, :error, error})
           end
         end)
 
@@ -118,13 +201,9 @@ if Code.ensure_loaded?(Postgrex) do
             final_count =
               stream
               |> Stream.map(fn chunk ->
-                # chunk_count = chunk_count + 1  # 未使用のため一時的にコメントアウト
-                # row_count = row_count + length(chunk)  # 未使用のため一時的にコメントアウト
-
                 # チャンクを処理
-                Enum.each(chunk, processor_fn)
-
-                length(chunk)
+                processor_fn.(chunk)
+                1
               end)
               |> Enum.sum()
 
@@ -151,124 +230,27 @@ if Code.ensure_loaded?(Postgrex) do
 
     # プライベート関数
 
-    defp create_cursor_stream(conn, cursor_name, max_rows) do
-      Stream.resource(
-        # 初期化
-        fn -> cursor_name end,
-
-        # 次のチャンクを取得
-        fn cursor ->
-          fetch_sql = "FETCH #{max_rows} FROM #{cursor}"
-
-          case Postgrex.query(conn, fetch_sql, []) do
-            {:ok, %{rows: rows, columns: columns}} when rows != [] ->
-              # 行をマップに変換
-              processed_rows =
-                Enum.map(rows, fn row ->
-                  columns
-                  |> Enum.zip(row)
-                  |> Enum.into(%{})
-                end)
-
-              {processed_rows, cursor}
-
-            _ ->
-              # データの終わりまたはエラー
-              {:halt, cursor}
-          end
-        end,
-
-        # クリーンアップ
-        fn cursor ->
-          # CURSORをクローズ
-          Postgrex.query(conn, "CLOSE #{cursor}", [])
-        end
-      )
-    end
-
-    @doc """
-    パラレルストリーミング（実験的機能）
-
-    複数の接続を使用して並列にデータを取得します。
-    """
-    def create_parallel(pool, sql, params, opts \\ []) do
-      parallelism = Keyword.get(opts, :parallelism, 4)
-      max_rows = Keyword.get(opts, :max_rows, 500)
-
-      # データを分割するための範囲を取得
-      {_status, ranges} = get_data_ranges(pool, sql, params, parallelism)
-
-      # 各範囲に対してストリームを作成
-      streams =
-        Enum.map(ranges, fn {start_id, end_id} ->
-          # 範囲を追加したSQLを作成
-          range_sql = add_range_condition(sql, start_id, end_id)
-
-          Task.async(fn ->
-            # プールから接続を取得
-            # TODO: poolboy依存性を確認して修正
-            # :poolboy.transaction(pool, fn conn ->
-            transaction_wrapper(pool, fn conn ->
-              create(conn, range_sql, params, max_rows: max_rows)
-            end)
+    defp fetch_rows(conn, cursor_name, chunk_size) do
+      fetch_sql = "FETCH #{chunk_size} FROM #{cursor_name}"
+      
+      case Postgrex.query(conn, fetch_sql, []) do
+        {:ok, %Postgrex.Result{rows: [], columns: _}} ->
+          {:ok, []}
+          
+        {:ok, %Postgrex.Result{rows: rows, columns: columns}} ->
+          atom_columns = Enum.map(columns, &String.to_atom/1)
+          
+          processed_rows = Enum.map(rows, fn row ->
+            atom_columns
+            |> Enum.zip(row)
+            |> Enum.into(%{})
           end)
-        end)
-
-      # 並列ストリームをマージ
-      merged_stream =
-        Stream.resource(
-          fn -> {streams, []} end,
-          fn {tasks, buffer} ->
-            if buffer != [] do
-              {buffer, {tasks, []}}
-            else
-              # 各タスクから結果を取得
-              new_buffer =
-                tasks
-                |> Enum.flat_map(fn task ->
-                  case Task.yield(task, 100) do
-                    {:ok, {:ok, stream}} ->
-                      stream |> Enum.take(1) |> List.flatten()
-
-                    _ ->
-                      []
-                  end
-                end)
-
-              if new_buffer == [] do
-                {:halt, {tasks, []}}
-              else
-                {new_buffer, {tasks, []}}
-              end
-            end
-          end,
-          fn {tasks, _} ->
-            Enum.each(tasks, &Task.shutdown/1)
-          end
-        )
-
-      {:ok, merged_stream}
-    end
-
-    defp get_data_ranges(_pool, _sql, _params, parallelism) do
-      # SQLからテーブル名を抽出し、主キーの範囲を取得
-      # これは簡略化された実装で、実際にはより複雑なロジックが必要
-      {:ok,
-       Enum.map(1..parallelism, fn i ->
-         {(i - 1) * 100_000, i * 100_000}
-       end)}
-    end
-
-    defp add_range_condition(sql, start_id, end_id) do
-      # WHERE句に範囲条件を追加
-      # これも簡略化された実装
-      sql <> " AND id BETWEEN #{start_id} AND #{end_id}"
-    end
-
-    defp transaction_wrapper(pool, fun) do
-      # 一時的なトランザクションラッパー
-      # TODO: poolboy実装を確認して修正
-      fun.(pool)
+          
+          {:ok, processed_rows}
+          
+        {:error, _} = error ->
+          error
+      end
     end
   end
 end
