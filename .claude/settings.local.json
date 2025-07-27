@@ -64,7 +64,15 @@
       "Bash(CI=true mix test --exclude duckdb)",
       "Bash(export CI=true)",
       "Bash(git restore:*)",
-      "Bash(mix dialyzer:*)"
+      "Bash(mix dialyzer:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(MIX_ENV=bench mix run benchmarks/tokenizer_benchmark.exs)",
+      "Bash(DUCKDB_TEST=true mix test test/duckdb_test.exs test/driver_test.exs --only duckdb)",
+      "Bash(DUCKDB_TEST=true mix test test/driver_test.exs:113 --trace)",
+      "Bash(DUCKDB_TEST=true mix test test/driver_test.exs:113 --include duckdb --trace)",
+      "Bash(mix format)",
+      "Bash(export DUCKDB_TEST=true)"
     ],
     "deny": []
   }

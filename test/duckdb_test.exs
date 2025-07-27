@@ -6,7 +6,7 @@ defmodule DuckDBTest do
 
   defmodule QueryDuckDB do
     use Yesql, driver: :duckdb
-    
+
     Yesql.defquery("test/sql/duckdb/select_older_ducks.sql")
     Yesql.defquery("test/sql/duckdb/insert_duck.sql")
     Yesql.defquery("test/sql/duckdb/analytics_query.sql")
@@ -17,7 +17,7 @@ defmodule DuckDBTest do
       "true" ->
         {:ok, db} = Duckdbex.open(":memory:")
         {:ok, conn} = Duckdbex.connection(db)
-        
+
         # テーブル作成
         create_sql = """
         CREATE TABLE ducks (
@@ -25,9 +25,9 @@ defmodule DuckDBTest do
           name VARCHAR
         )
         """
-        
+
         {:ok, _} = Duckdbex.query(conn, create_sql, [])
-        
+
         # 分析用テーブル作成
         analytics_sql = """
         CREATE TABLE sales (
@@ -37,15 +37,15 @@ defmodule DuckDBTest do
           quantity INTEGER
         )
         """
-        
+
         {:ok, _} = Duckdbex.query(conn, analytics_sql, [])
-        
+
         # core_functionsエクステンションをロード（SUM等の集計関数用）
         {:ok, _} = Duckdbex.query(conn, "INSTALL core_functions", [])
         {:ok, _} = Duckdbex.query(conn, "LOAD core_functions", [])
-        
+
         {:ok, conn: conn, db: db}
-        
+
       _ ->
         {:ok, %{skip: true}}
     end
@@ -58,6 +58,7 @@ defmodule DuckDBTest do
         {:ok, _} = Duckdbex.query(conn, "DELETE FROM ducks", [])
         {:ok, _} = Duckdbex.query(conn, "DELETE FROM sales", [])
         :ok
+
       _ ->
         :ok
     end
@@ -70,7 +71,7 @@ defmodule DuckDBTest do
       assert QueryDuckDB.insert_duck(conn, age: 5, name: "Donald") == {:ok, []}
       assert QueryDuckDB.insert_duck(conn, age: 10, name: "Daisy") == {:ok, []}
       assert QueryDuckDB.insert_duck(conn, age: 3, name: "Huey") == {:ok, []}
-      
+
       # 年齢でフィルタリング
       assert {:ok, result} = QueryDuckDB.select_older_ducks(conn, age: 4)
       assert length(result) == 2
@@ -82,7 +83,7 @@ defmodule DuckDBTest do
     test "パラメータ変換が正しく動作する", %{conn: conn} do
       # 複数のパラメータを使用
       assert QueryDuckDB.insert_duck(conn, age: 7, name: "Scrooge") == {:ok, []}
-      
+
       # 名前付きパラメータが正しく$1, $2形式に変換されることを確認
       assert {:ok, result} = QueryDuckDB.select_older_ducks(conn, age: 6)
       assert length(result) == 1
@@ -98,17 +99,22 @@ defmodule DuckDBTest do
         {~D[2024-01-02], "Product A", 150.75, 7},
         {~D[2024-01-02], "Product B", 175.25, 2}
       ]
-      
+
       for {date, product, amount, quantity} <- sales_data do
         sql = "INSERT INTO sales (date, product, amount, quantity) VALUES ($1, $2, $3, $4)"
         # DuckDBexはDate型を直接サポートしないため、文字列に変換
         {:ok, _} = Duckdbex.query(conn, sql, [Date.to_iso8601(date), product, amount, quantity])
       end
-      
+
       # 分析クエリ実行
-      assert {:ok, result} = QueryDuckDB.analytics_query(conn, start_date: ~D[2024-01-01], end_date: ~D[2024-01-02])
+      assert {:ok, result} =
+               QueryDuckDB.analytics_query(conn,
+                 start_date: ~D[2024-01-01],
+                 end_date: ~D[2024-01-02]
+               )
+
       assert length(result) == 2
-      
+
       # 結果の検証
       product_a = Enum.find(result, &(&1.product == "Product A"))
       # DuckDBはDecimalを{{分子, 符号}, 基数, 精度}の形式で返す
@@ -130,10 +136,10 @@ defmodule DuckDBTest do
     test "DuckDBの結果が正しく変換される", %{conn: conn} do
       # データ挿入
       QueryDuckDB.insert_duck(conn, age: 25, name: "Ludwig")
-      
+
       # 結果取得
       assert {:ok, [duck]} = QueryDuckDB.select_older_ducks(conn, age: 20)
-      
+
       # 結果がマップ形式であることを確認
       assert is_map(duck)
       assert duck.age == 25
@@ -145,7 +151,7 @@ defmodule DuckDBTest do
       # nameをNULLで挿入
       sql = "INSERT INTO ducks (age, name) VALUES ($1, NULL)"
       {:ok, _} = Duckdbex.query(conn, sql, [15])
-      
+
       # 結果取得
       assert {:ok, [duck]} = QueryDuckDB.select_older_ducks(conn, age: 10)
       assert duck.age == 15

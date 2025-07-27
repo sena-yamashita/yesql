@@ -1,13 +1,13 @@
 defmodule Yesql.Driver.SQLite do
   @moduledoc """
   SQLiteドライバーの実装
-  
+
   Exqliteライブラリを使用してSQLiteデータベースへのアクセスを提供します。
   メモリデータベースとファイルベースのデータベースの両方をサポートします。
   """
-  
+
   defstruct []
-  
+
   # Exqliteが利用可能な場合のみプロトコル実装を定義
   if match?({:module, _}, Code.ensure_compiled(Exqlite)) do
     defimpl Yesql.Driver, for: __MODULE__ do
@@ -19,6 +19,7 @@ defmodule Yesql.Driver.SQLite do
           case Exqlite.query(conn, sql, params) do
             {:ok, result} ->
               process_result(driver, {:ok, result})
+
             {:error, _} = error ->
               error
           end
@@ -26,7 +27,7 @@ defmodule Yesql.Driver.SQLite do
           {:error, "Exqlite is not available. Please add :exqlite to your dependencies."}
         end
       end
-      
+
       @doc """
       名前付きパラメータをSQLiteの?形式に変換する
       """
@@ -38,41 +39,43 @@ defmodule Yesql.Driver.SQLite do
           Yesql.TokenizerHelper.extract_params_with_duplicates(tokens, format_fn)
         end
       end
-      
+
       @doc """
       SQLiteの結果をマップのリストに変換する
       """
       def process_result(_driver, {:ok, result}) do
-        columns = result.columns
-        |> Enum.map(&String.to_atom/1)
-        
-        rows = result.rows
-        |> Enum.map(fn row ->
-          columns
-          |> Enum.zip(row)
-          |> Enum.into(%{})
-        end)
-        
+        columns =
+          result.columns
+          |> Enum.map(&String.to_atom/1)
+
+        rows =
+          result.rows
+          |> Enum.map(fn row ->
+            columns
+            |> Enum.zip(row)
+            |> Enum.into(%{})
+          end)
+
         {:ok, rows}
       end
-      
+
       def process_result(_driver, {:error, _} = error), do: error
     end
   end
-  
+
   @doc """
   SQLiteデータベースへの接続を開く
-  
+
   ## オプション
-  
+
     * `:database` - データベースファイルのパス、または`:memory`でメモリDB
     * `:timeout` - クエリタイムアウト（ミリ秒）
     * `:busy_timeout` - ビジータイムアウト（ミリ秒）
     * `:cache_size` - キャッシュサイズ（ページ数）
     * `:mode` - 接続モード（:readwrite, :readonly）
-  
+
   ## 例
-  
+
       # ファイルベースのデータベース
       {:ok, conn} = SQLite.open("myapp.db")
       
@@ -91,32 +94,32 @@ defmodule Yesql.Driver.SQLite do
         timeout: opts[:timeout] || 5000,
         busy_timeout: opts[:busy_timeout] || 2000
       ]
-      
+
       case Exqlite.Sqlite3.open(database) do
         {:ok, db} ->
           conn = %{db: db, config: config}
-          
+
           # 基本的な設定
           if cache_size = opts[:cache_size] do
             # SQLiteの直接操作は、別途Exqlite経由で行う必要がある
             # TODO: 適切なExqlite接続を使用してPRAGMAを設定
             _ = cache_size
           end
-          
+
           # WALモードを有効化（ファイルベースの場合）
           if database != ":memory:" && opts[:mode] != :readonly do
             # TODO: 適切なExqlite接続を使用してPRAGMAを設定
             :ok
           end
-          
+
           {:ok, conn}
-          
+
         error ->
           error
       end
     end
   end
-  
+
   @doc """
   SQLiteのバージョン情報を取得
   """
@@ -128,6 +131,7 @@ defmodule Yesql.Driver.SQLite do
         {:ok, result} ->
           [[version]] = result.rows
           {:ok, version}
+
         error ->
           error
       end

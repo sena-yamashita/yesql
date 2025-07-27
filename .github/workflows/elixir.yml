@@ -161,7 +161,7 @@ jobs:
     - name: Run DuckDB tests
       env:
         DUCKDB_TEST: "true"
-      run: mix test test/duckdb*_test.exs
+      run: mix test test/duckdb_test.exs test/duckdb_column_test.exs
 
   code-quality:
     name: Code Quality

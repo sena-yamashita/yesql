@@ -10,12 +10,13 @@ if System.get_env("DUCKDB_TEST") == "true" do
 else
   # DuckDBテストに関する警告を表示
   if Mix.env() == :test do
-    has_duckdb_tests = File.ls!("test")
-    |> Enum.any?(fn file -> 
-      file =~ ~r/duckdb.*\.exs$/ && 
-      File.read!("test/#{file}") =~ ~r/@tag\s+:duckdb/
-    end)
-    
+    has_duckdb_tests =
+      File.ls!("test")
+      |> Enum.any?(fn file ->
+        file =~ ~r/duckdb.*\.exs$/ &&
+          File.read!("test/#{file}") =~ ~r/@tag\s+:duckdb/
+      end)
+
     if has_duckdb_tests do
       IO.puts("\n⚠️  DuckDBテストを実行するには: DUCKDB_TEST=true mix test")
     end
@@ -42,13 +43,13 @@ defmodule TestHelper do
       database: "postgres",
       port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
     ]
-    
+
     case Postgrex.start_link(setup_opts) do
       {:ok, setup_conn} ->
         # データベースが存在しない場合は作成
         Postgrex.query(setup_conn, "CREATE DATABASE yesql_test", [])
         GenServer.stop(setup_conn)
-        
+
         # yesql_testデータベースに接続
         opts = [
           hostname: System.get_env("POSTGRES_HOST", "localhost"),
@@ -58,14 +59,15 @@ defmodule TestHelper do
           port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
           name: Module.concat(ctx.module, Postgrex)
         ]
-        
+
         case Postgrex.start_link(opts) do
-          {:ok, conn} -> 
+          {:ok, conn} ->
             {:ok, postgrex: conn}
+
           {:error, _} ->
             {:error, :connection_failed}
         end
-        
+
       {:error, _} ->
         {:error, :connection_failed}
     end
@@ -87,10 +89,12 @@ defmodule TestHelper do
       {:ok, _} -> :ok
       {:error, _} -> :ok
     end
-    
+
     case Postgrex.query(ctx[:postgrex], create_sql, []) do
-      {:ok, _} -> :ok
-      {:error, reason} -> 
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
         IO.puts("Failed to create cats table: #{inspect(reason)}")
         {:error, reason}
     end
@@ -107,6 +111,7 @@ defmodule TestHelper do
         {:ok, db} = Duckdbex.open(":memory:")
         {:ok, conn} = Duckdbex.connection(db)
         {:ok, duckdb: conn, db: db}
+
       _ ->
         # 環境変数が設定されていない場合、警告メッセージを表示
         IO.puts("\n⚠️  DuckDBテストはスキップされます。実行するには: DUCKDB_TEST=true mix test")
@@ -130,12 +135,14 @@ defmodule TestHelper do
     Duckdbex.query(conn, create_sql, [])
     :ok
   end
+
   def create_ducks_duckdb_table(_), do: :skip
 
   def truncate_duckdb_ducks(%{duckdb: conn}) do
     Duckdbex.query(conn, "DELETE FROM ducks", [])
     :ok
   end
+
   def truncate_duckdb_ducks(_), do: :skip
 
   # MySQL helpers
@@ -147,13 +154,13 @@ defmodule TestHelper do
       password: System.get_env("MYSQL_PASSWORD", "root"),
       port: String.to_integer(System.get_env("MYSQL_PORT", "3306"))
     ]
-    
+
     case MyXQL.start_link(setup_opts) do
       {:ok, setup_conn} ->
         # データベースが存在しない場合は作成
         MyXQL.query(setup_conn, "CREATE DATABASE IF NOT EXISTS yesql_test")
         GenServer.stop(setup_conn)
-        
+
         # yesql_testデータベースに接続
         opts = [
           hostname: System.get_env("MYSQL_HOST", "localhost"),
@@ -162,14 +169,15 @@ defmodule TestHelper do
           database: System.get_env("MYSQL_DATABASE", "yesql_test"),
           port: String.to_integer(System.get_env("MYSQL_PORT", "3306"))
         ]
-        
+
         case MyXQL.start_link(opts) do
-          {:ok, conn} -> 
+          {:ok, conn} ->
             {:ok, mysql: conn}
+
           {:error, _} ->
             :skip
         end
-        
+
       {:error, _} ->
         :skip
     end
@@ -177,6 +185,7 @@ defmodule TestHelper do
 
   def create_mysql_test_table(%{mysql: conn}) do
     drop_sql = "DROP TABLE IF EXISTS users"
+
     create_sql = """
     CREATE TABLE users (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -185,11 +194,12 @@ defmodule TestHelper do
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """
-    
+
     MyXQL.query!(conn, drop_sql)
     MyXQL.query!(conn, create_sql)
     :ok
   end
+
   def create_mysql_test_table(_), do: :skip
 
   # MSSQL helpers
@@ -203,8 +213,9 @@ defmodule TestHelper do
     ]
 
     case Tds.start_link(opts) do
-      {:ok, conn} -> 
+      {:ok, conn} ->
         {:ok, mssql: conn}
+
       {:error, _} ->
         :skip
     end
@@ -212,6 +223,7 @@ defmodule TestHelper do
 
   def create_mssql_test_table(%{mssql: conn}) do
     drop_sql = "IF OBJECT_ID('users', 'U') IS NOT NULL DROP TABLE users"
+
     create_sql = """
     CREATE TABLE users (
       id INT IDENTITY(1,1) PRIMARY KEY,
@@ -220,11 +232,12 @@ defmodule TestHelper do
       created_at DATETIME DEFAULT GETDATE()
     )
     """
-    
+
     Tds.query!(conn, drop_sql, [])
     Tds.query!(conn, create_sql, [])
     :ok
   end
+
   def create_mssql_test_table(_), do: :skip
 
   # SQLite helpers
@@ -242,10 +255,11 @@ defmodule TestHelper do
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """
-    
+
     Exqlite.Sqlite3.execute(conn, create_sql)
     :ok
   end
+
   def create_sqlite_test_table(_), do: :skip
 
   # Oracle helpers
@@ -259,8 +273,9 @@ defmodule TestHelper do
     ]
 
     case Jamdb.Oracle.start_link(opts) do
-      {:ok, conn} -> 
+      {:ok, conn} ->
         {:ok, oracle: conn}
+
       {:error, _} ->
         :skip
     end
@@ -282,9 +297,10 @@ defmodule TestHelper do
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """
-    
+
     Jamdb.Oracle.query(conn, create_sql)
     :ok
   end
+
   def create_oracle_test_table(_), do: :skip
 end

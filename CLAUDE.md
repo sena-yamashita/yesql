@@ -181,6 +181,16 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 2. 中：パフォーマンス最適化
 3. 低：追加ドライバー対応（MySQL、MSSQL、Oracle）
 
+## 外部ライブラリAPI使用時の注意
+
+外部ライブラリのAPIを使用する際は、必ず以下を実施してください：
+
+1. **ソースコードの確認** - GitHubで実際の実装を確認
+2. **ドキュメントの確認** - hexdocsやREADMEで仕様を確認
+3. **動作確認** - iexで実際に動作を確認
+
+詳細は `docs/development/external_api_verification_checklist.md` を参照。
+
 ## 参考
 
 - オリジナルフォーク元: https://github.com/lpil/yesql

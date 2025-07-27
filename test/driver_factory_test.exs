@@ -18,7 +18,7 @@ defmodule Yesql.DriverFactoryTest do
         assert {:ok, driver} = Yesql.DriverFactory.create(:duckdb)
         assert %Yesql.Driver.DuckDB{} = driver
       else
-          {:ok, skip: true}
+        {:ok, skip: true}
       end
     end
 
@@ -32,7 +32,7 @@ defmodule Yesql.DriverFactoryTest do
       drivers = Yesql.DriverFactory.available_drivers()
       assert :postgrex in drivers
       assert :ecto in drivers
-      
+
       # DuckDBはDUCKDB_TEST環境変数に依存
       if System.get_env("DUCKDB_TEST") == "true" do
         assert :duckdb in drivers

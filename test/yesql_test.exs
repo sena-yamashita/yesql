@@ -2,7 +2,7 @@ defmodule YesqlTest do
   use ExUnit.Case
   doctest Yesql
   import TestHelper
-  
+
   @moduletag :integration
   @moduletag :db_required
 
@@ -32,11 +32,14 @@ defmodule YesqlTest do
     case new_postgrex_connection(%{module: __MODULE__}) do
       {:ok, ctx} ->
         case create_cats_postgres_table(ctx) do
-          :ok -> ctx
-          {:error, _} -> 
+          :ok ->
+            ctx
+
+          {:error, _} ->
             IO.puts("Skipping Yesql tests - failed to create test table")
             {:ok, skip: true}
         end
+
       {:error, _} ->
         IO.puts("Skipping Yesql tests - database connection failed")
         {:ok, skip: true}

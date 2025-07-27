@@ -1,18 +1,18 @@
 defmodule Yesql.Stream do
   @moduledoc """
   ストリーミング結果セットのサポートモジュール
-  
+
   大量のデータを扱う際にメモリ効率的にデータを処理するための機能を提供します。
   各データベースドライバーに対して統一的なストリーミングインターフェースを提供します。
   """
-  
+
   alias Yesql.DriverFactory
-  
+
   @doc """
   ストリーミングクエリを実行し、Streamを返す
-  
+
   ## パラメータ
-  
+
     * `conn` - データベース接続
     * `sql` - 実行するSQL
     * `params` - クエリパラメータ
@@ -21,14 +21,14 @@ defmodule Yesql.Stream do
       * `:chunk_size` - 一度に取得する行数（デフォルト: 1000）
       * `:timeout` - クエリタイムアウト（ミリ秒）
       * `:max_rows` - 最大行数の制限
-  
+
   ## 戻り値
-  
+
     * `{:ok, stream}` - Elixir Streamオブジェクト
     * `{:error, reason}` - エラーの場合
-  
+
   ## 例
-  
+
       {:ok, stream} = Yesql.Stream.query(conn, 
         "SELECT * FROM large_table WHERE created_at > $1",
         [~D[2024-01-01]],
@@ -45,7 +45,7 @@ defmodule Yesql.Stream do
   def query(conn, sql, params, opts) do
     driver_name = Keyword.fetch!(opts, :driver)
     chunk_size = Keyword.get(opts, :chunk_size, 1000)
-    
+
     with {:ok, driver} <- DriverFactory.create(driver_name) do
       if supports_streaming?(driver) do
         create_stream(driver, conn, sql, params, chunk_size, opts)
@@ -54,14 +54,14 @@ defmodule Yesql.Stream do
       end
     end
   end
-  
+
   @doc """
   ストリーミングクエリを使用してデータを処理する
-  
+
   大量のデータに対して変換処理を適用し、結果を効率的に処理します。
-  
+
   ## 例
-  
+
       # CSVファイルへのエクスポート
       {:ok, count} = Yesql.Stream.process(conn,
         "SELECT * FROM users WHERE status = $1",
@@ -77,25 +77,26 @@ defmodule Yesql.Stream do
   def process(conn, sql, params, processor_fn, opts) when is_function(processor_fn, 1) do
     case query(conn, sql, params, opts) do
       {:ok, stream} ->
-        count = stream
-        |> Stream.map(fn row ->
-          processor_fn.(row)
-          1
-        end)
-        |> Enum.sum()
-        
+        count =
+          stream
+          |> Stream.map(fn row ->
+            processor_fn.(row)
+            1
+          end)
+          |> Enum.sum()
+
         {:ok, count}
-        
+
       error ->
         error
     end
   end
-  
+
   @doc """
   ストリーミングクエリでデータを集約する
-  
+
   ## 例
-  
+
       # 売上合計を計算（メモリ効率的）
       {:ok, total} = Yesql.Stream.reduce(conn,
         "SELECT amount FROM sales WHERE year = $1",
@@ -108,23 +109,24 @@ defmodule Yesql.Stream do
   def reduce(conn, sql, params, initial, reducer_fn, opts) when is_function(reducer_fn, 2) do
     case query(conn, sql, params, opts) do
       {:ok, stream} ->
-        result = stream
-        |> Enum.reduce(initial, reducer_fn)
-        
+        result =
+          stream
+          |> Enum.reduce(initial, reducer_fn)
+
         {:ok, result}
-        
+
       error ->
         error
     end
   end
-  
+
   @doc """
   ストリーミングでバッチ処理を実行
-  
+
   データを指定されたバッチサイズごとに処理します。
-  
+
   ## 例
-  
+
       {:ok, batch_count} = Yesql.Stream.batch_process(conn,
         "SELECT * FROM logs WHERE level = $1",
         ["error"],
@@ -136,26 +138,28 @@ defmodule Yesql.Stream do
         driver: :postgrex
       )
   """
-  def batch_process(conn, sql, params, batch_size, batch_fn, opts) when is_function(batch_fn, 1) do
+  def batch_process(conn, sql, params, batch_size, batch_fn, opts)
+      when is_function(batch_fn, 1) do
     case query(conn, sql, params, opts) do
       {:ok, stream} ->
-        batch_count = stream
-        |> Stream.chunk_every(batch_size)
-        |> Stream.map(fn batch ->
-          batch_fn.(batch)
-          1
-        end)
-        |> Enum.sum()
-        
+        batch_count =
+          stream
+          |> Stream.chunk_every(batch_size)
+          |> Stream.map(fn batch ->
+            batch_fn.(batch)
+            1
+          end)
+          |> Enum.sum()
+
         {:ok, batch_count}
-        
+
       error ->
         error
     end
   end
-  
+
   # プライベート関数
-  
+
   defp supports_streaming?(%Yesql.Driver.Postgrex{}), do: true
   defp supports_streaming?(%Yesql.Driver.MySQL{}), do: true
   defp supports_streaming?(%Yesql.Driver.DuckDB{}), do: true
@@ -164,7 +168,7 @@ defmodule Yesql.Stream do
   defp supports_streaming?(%Yesql.Driver.Oracle{}), do: true
   defp supports_streaming?(%Yesql.Driver.Ecto{}), do: true
   defp supports_streaming?(_), do: false
-  
+
   defp create_stream(%Yesql.Driver.Postgrex{} = _driver, conn, sql, params, chunk_size, _opts) do
     try do
       module = Module.concat(Yesql.Stream, PostgrexStream)
@@ -173,7 +177,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.MySQL{} = _driver, conn, sql, params, chunk_size, _opts) do
     try do
       module = Module.concat(Yesql.Stream, MySQLStream)
@@ -182,7 +186,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.DuckDB{} = _driver, conn, sql, params, chunk_size, _opts) do
     try do
       module = Module.concat(Yesql.Stream, DuckDBStream)
@@ -191,7 +195,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.SQLite{} = _driver, conn, sql, params, chunk_size, _opts) do
     try do
       module = Module.concat(Yesql.Stream, SQLiteStream)
@@ -200,7 +204,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.MSSQL{} = _driver, conn, sql, params, chunk_size, opts) do
     try do
       module = Module.concat(Yesql.Stream, MSSQLStream)
@@ -209,7 +213,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.Oracle{} = _driver, conn, sql, params, chunk_size, opts) do
     try do
       module = Module.concat(Yesql.Stream, OracleStream)
@@ -218,7 +222,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(%Yesql.Driver.Ecto{} = _driver, conn, sql, params, _chunk_size, opts) do
     try do
       module = Module.concat(Yesql.Stream, EctoStream)
@@ -227,7 +231,7 @@ defmodule Yesql.Stream do
       _ -> {:error, :streaming_module_not_available}
     end
   end
-  
+
   defp create_stream(_, _, _, _, _, _) do
     {:error, :streaming_not_implemented}
   end

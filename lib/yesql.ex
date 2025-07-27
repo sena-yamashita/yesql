@@ -39,13 +39,14 @@ defmodule Yesql do
       conn = opts[:conn] || @yesql_private__conn
 
       # ドライバー名を正規化（モジュール名からアトムへ）
-      driver_atom = case driver_name do
-        Postgrex -> :postgrex
-        Ecto -> :ecto
-        atom when is_atom(atom) -> atom
-        _ -> driver_name
-      end
-      
+      driver_atom =
+        case driver_name do
+          Postgrex -> :postgrex
+          Ecto -> :ecto
+          atom when is_atom(atom) -> atom
+          _ -> driver_name
+        end
+
       # ドライバーインスタンスを作成
       case DriverFactory.create(driver_atom) do
         {:ok, driver_instance} ->
@@ -54,20 +55,35 @@ defmodule Yesql do
           {sql, param_spec} = Driver.convert_params(driver_instance, raw_sql, [])
 
           def unquote(name)(conn, args) do
-            Yesql.exec(conn, unquote(Macro.escape(driver_instance)), unquote(sql), unquote(param_spec), args)
+            Yesql.exec(
+              conn,
+              unquote(Macro.escape(driver_instance)),
+              unquote(sql),
+              unquote(param_spec),
+              args
+            )
           end
 
           if conn do
             def unquote(name)(args) do
-              Yesql.exec(unquote(conn), unquote(Macro.escape(driver_instance)), unquote(sql), unquote(param_spec), args)
+              Yesql.exec(
+                unquote(conn),
+                unquote(Macro.escape(driver_instance)),
+                unquote(sql),
+                unquote(param_spec),
+                args
+              )
             end
           end
-          
+
         {:error, :unknown_driver} ->
           raise(UnknownDriver, driver_atom)
-          
+
         {:error, :driver_not_loaded} ->
-          raise(UnknownDriver, "Driver #{driver_atom} is not loaded. Make sure the required library is in your dependencies.")
+          raise(
+            UnknownDriver,
+            "Driver #{driver_atom} is not loaded. Make sure the required library is in your dependencies."
+          )
       end
     end
   end
@@ -78,12 +94,13 @@ defmodule Yesql do
     with {:ok, tokens, _} <- Yesql.TokenizerHelper.tokenize(sql) do
       # PostgreSQL形式（$1, $2...）に変換
       format_param = fn _param, index -> "$#{index}" end
-      {converted_sql, params} = Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
-      
+
+      {converted_sql, params} =
+        Yesql.TokenizerHelper.extract_and_convert_params(tokens, format_param)
+
       {:ok, converted_sql, params}
     end
   end
-
 
   @doc false
   def exec(conn, driver, sql, param_spec, data) do

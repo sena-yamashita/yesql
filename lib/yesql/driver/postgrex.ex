@@ -1,12 +1,12 @@
 defmodule Yesql.Driver.Postgrex do
   @moduledoc """
   PostgreSQL用のYesqlドライバー実装
-  
+
   Postgrexライブラリを使用してPostgreSQLデータベースと通信します。
   """
-  
+
   defstruct []
-  
+
   if match?({:module, _}, Code.ensure_compiled(Postgrex)) do
     defimpl Yesql.Driver, for: __MODULE__ do
       def execute(_driver, conn, sql, params) do
@@ -26,18 +26,19 @@ defmodule Yesql.Driver.Postgrex do
         case result do
           %{columns: columns, rows: rows} ->
             atom_columns = Enum.map(columns || [], &String.to_atom/1)
-            
-            formatted_rows = Enum.map(rows || [], fn row ->
-              atom_columns |> Enum.zip(row) |> Enum.into(%{})
-            end)
-            
+
+            formatted_rows =
+              Enum.map(rows || [], fn row ->
+                atom_columns |> Enum.zip(row) |> Enum.into(%{})
+              end)
+
             {:ok, formatted_rows}
-            
+
           _ ->
             {:error, :invalid_result_format}
         end
       end
-      
+
       def process_result(_driver, {:error, error}) do
         {:error, error}
       end

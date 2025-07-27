@@ -46,7 +46,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_cast_test_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -54,18 +55,24 @@ defmodule DriverCastSyntaxTest do
     @tag :postgres
     test ":: キャスト構文が正しく動作する", %{postgrex: conn} do
       # テストデータの挿入
-      {:ok, _} = Postgrex.query(conn, """
-        INSERT INTO cast_test (text_col, int_col, jsonb_col, array_col)
-        VALUES ('123', 456, '{"key": "value"}', '{1,2,3}')
-      """, [])
+      {:ok, _} =
+        Postgrex.query(
+          conn,
+          """
+            INSERT INTO cast_test (text_col, int_col, jsonb_col, array_col)
+            VALUES ('123', 456, '{"key": "value"}', '{1,2,3}')
+          """,
+          []
+        )
 
       # Yesqlクエリの実行（::キャスト使用）
-      {:ok, results} = PostgresQuery.postgres_cast(conn, 
-        text_value: "789",
-        int_value: 100,
-        jsonb_value: %{"test" => true},
-        array_value: [4, 5, 6]
-      )
+      {:ok, results} =
+        PostgresQuery.postgres_cast(conn,
+          text_value: "789",
+          int_value: 100,
+          jsonb_value: %{"test" => true},
+          array_value: [4, 5, 6]
+        )
 
       assert length(results) > 0
     end
@@ -82,15 +89,16 @@ defmodule DriverCastSyntaxTest do
         :numeric::numeric(10,2),
         :interval::interval
       """
-      
-      {:ok, %Postgrex.Result{rows: [row]}} = Postgrex.query(conn, sql, [
-        "2024-01-01",
-        "12:30:45",
-        "2024-01-01 12:30:45+00",
-        "550e8400-e29b-41d4-a716-446655440000",
-        Decimal.new("123.45"),
-        "1 day"
-      ])
+
+      {:ok, %Postgrex.Result{rows: [row]}} =
+        Postgrex.query(conn, sql, [
+          "2024-01-01",
+          "12:30:45",
+          "2024-01-01 12:30:45+00",
+          "550e8400-e29b-41d4-a716-446655440000",
+          Decimal.new("123.45"),
+          "1 day"
+        ])
 
       assert row != nil
     end
@@ -102,7 +110,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_duckdb_cast_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -112,7 +121,7 @@ defmodule DriverCastSyntaxTest do
       # DuckDBもPostgreSQL互換の::をサポート
       # 注意: DuckDBはパラメータをサポートしないため、直接値を埋め込む
       sql = "SELECT '123'::INTEGER as int_val, 'test'::VARCHAR as text_val"
-      
+
       {:ok, result} = Duckdbex.query(conn, sql, [])
       assert [[123, "test"]] = result
     end
@@ -124,7 +133,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_mysql_cast_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -132,11 +142,12 @@ defmodule DriverCastSyntaxTest do
     @tag :mysql
     test "MySQLのCAST関数", %{mysql: conn} do
       # MySQLはCAST関数を使用
-      {:ok, results} = MySQLQuery.mysql_cast(conn,
-        text_value: "123",
-        int_value: 456,
-        date_value: ~D[2024-01-01]
-      )
+      {:ok, results} =
+        MySQLQuery.mysql_cast(conn,
+          text_value: "123",
+          int_value: 456,
+          date_value: ~D[2024-01-01]
+        )
 
       assert length(results) > 0
     end
@@ -148,7 +159,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_sqlite_cast_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -156,12 +168,14 @@ defmodule DriverCastSyntaxTest do
     @tag :sqlite
     test "SQLiteのCAST関数", %{sqlite: conn} do
       # SQLiteもCAST関数を使用
-      {:ok, results} = SQLiteQuery.sqlite_cast(conn,
-        text_value: "123",
-        int_value: 456,
-        real_value: 123.45,
-        value: "test"  # 型親和性テスト用のパラメータ
-      )
+      {:ok, results} =
+        SQLiteQuery.sqlite_cast(conn,
+          text_value: "123",
+          int_value: 456,
+          real_value: 123.45,
+          # 型親和性テスト用のパラメータ
+          value: "test"
+        )
 
       assert length(results) > 0
     end
@@ -173,7 +187,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_mssql_cast_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -181,11 +196,12 @@ defmodule DriverCastSyntaxTest do
     @tag :mssql
     test "MSSQLのCAST/CONVERT", %{mssql: conn} do
       # MSSQLはCASTとCONVERTの両方をサポート
-      {:ok, results} = MSSQLQuery.mssql_cast(conn,
-        text_value: "123",
-        int_value: 456,
-        date_value: ~D[2024-01-01]
-      )
+      {:ok, results} =
+        MSSQLQuery.mssql_cast(conn,
+          text_value: "123",
+          int_value: 456,
+          date_value: ~D[2024-01-01]
+        )
 
       assert length(results) > 0
     end
@@ -197,7 +213,8 @@ defmodule DriverCastSyntaxTest do
         {:ok, ctx} ->
           create_oracle_cast_table(ctx)
           ctx
-        _ -> 
+
+        _ ->
           {:ok, skip: true}
       end
     end
@@ -205,11 +222,12 @@ defmodule DriverCastSyntaxTest do
     @tag :oracle
     test "OracleのCAST関数", %{oracle: conn} do
       # OracleはCAST関数を使用
-      {:ok, results} = OracleQuery.oracle_cast(conn,
-        text_value: "123",
-        int_value: 456,
-        date_value: ~D[2024-01-01]
-      )
+      {:ok, results} =
+        OracleQuery.oracle_cast(conn,
+          text_value: "123",
+          int_value: 456,
+          date_value: ~D[2024-01-01]
+        )
 
       assert length(results) > 0
     end
@@ -219,36 +237,47 @@ defmodule DriverCastSyntaxTest do
 
   defp create_cast_test_table(ctx) when is_list(ctx) do
     conn = ctx[:postgrex]
-    {:ok, _} = Postgrex.query(conn, """
-      CREATE TABLE IF NOT EXISTS cast_test (
-        id SERIAL PRIMARY KEY,
-        text_col TEXT,
-        int_col INTEGER,
-        jsonb_col JSONB,
-        array_col INTEGER[]
+
+    {:ok, _} =
+      Postgrex.query(
+        conn,
+        """
+          CREATE TABLE IF NOT EXISTS cast_test (
+            id SERIAL PRIMARY KEY,
+            text_col TEXT,
+            int_col INTEGER,
+            jsonb_col JSONB,
+            array_col INTEGER[]
+          )
+        """,
+        []
       )
-    """, [])
-    
+
     {:ok, _} = Postgrex.query(conn, "TRUNCATE cast_test", [])
     :ok
   end
 
   defp create_duckdb_cast_table(%{duckdb: conn}) do
-    Duckdbex.query(conn, """
-      CREATE TABLE IF NOT EXISTS cast_test (
-        id INTEGER,
-        text_col VARCHAR,
-        int_col INTEGER,
-        decimal_col DECIMAL(10,2)
-      )
-    """, [])
-    
+    Duckdbex.query(
+      conn,
+      """
+        CREATE TABLE IF NOT EXISTS cast_test (
+          id INTEGER,
+          text_col VARCHAR,
+          int_col INTEGER,
+          decimal_col DECIMAL(10,2)
+        )
+      """,
+      []
+    )
+
     Duckdbex.query(conn, "DELETE FROM cast_test", [])
     :ok
   end
 
   defp create_mysql_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:mysql]
+
     MyXQL.query!(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -257,13 +286,14 @@ defmodule DriverCastSyntaxTest do
         date_col DATE
       )
     """)
-    
+
     MyXQL.query!(conn, "TRUNCATE cast_test")
     :ok
   end
 
   defp create_sqlite_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:sqlite]
+
     Exqlite.Sqlite3.execute(conn, """
       CREATE TABLE IF NOT EXISTS cast_test (
         id INTEGER PRIMARY KEY,
@@ -272,23 +302,28 @@ defmodule DriverCastSyntaxTest do
         real_col REAL
       )
     """)
-    
+
     Exqlite.Sqlite3.execute(conn, "DELETE FROM cast_test")
     :ok
   end
 
   defp create_mssql_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:mssql]
-    Tds.query!(conn, """
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='cast_test' AND xtype='U')
-      CREATE TABLE cast_test (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        text_col NVARCHAR(255),
-        int_col INT,
-        date_col DATE
-      )
-    """, [])
-    
+
+    Tds.query!(
+      conn,
+      """
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='cast_test' AND xtype='U')
+        CREATE TABLE cast_test (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          text_col NVARCHAR(255),
+          int_col INT,
+          date_col DATE
+        )
+      """,
+      []
+    )
+
     Tds.query!(conn, "TRUNCATE TABLE cast_test", [])
     :ok
   end
@@ -301,17 +336,20 @@ defmodule DriverCastSyntaxTest do
     rescue
       _ -> :ok
     end
-    
-    Jamdb.Oracle.query!(conn, """
-      CREATE TABLE cast_test (
-        id NUMBER PRIMARY KEY,
-        text_col VARCHAR2(255),
-        int_col NUMBER,
-        date_col DATE
-      )
-    """, [])
-    
+
+    Jamdb.Oracle.query!(
+      conn,
+      """
+        CREATE TABLE cast_test (
+          id NUMBER PRIMARY KEY,
+          text_col VARCHAR2(255),
+          int_col NUMBER,
+          date_col DATE
+        )
+      """,
+      []
+    )
+
     :ok
   end
-
 end

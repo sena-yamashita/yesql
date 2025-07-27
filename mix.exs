@@ -53,7 +53,7 @@ defmodule Yesql.Mixfile do
       extra_applications: [:logger]
     ]
   end
-  
+
   def cli do
     [
       preferred_envs: [
@@ -71,7 +71,7 @@ defmodule Yesql.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
-  
+
   defp dialyzer do
     [
       plt_core_path: "priv/plts",
@@ -88,24 +88,24 @@ defmodule Yesql.Mixfile do
       ignore_warnings: "dialyzer_ignore.exs"
     ]
   end
-  
+
   defp aliases do
     [
       # ローカル開発用: 単体テストのみ実行（高速）
       "test.unit": ["test --only unit"],
-      
+
       # 全テスト実行（DB接続必要）
       "test.full": ["cmd FULL_TEST=true mix test"],
-      
+
       # CI用フルテスト
       "test.ci": ["cmd CI=true mix test"],
-      
+
       # 各DBごとのテスト
       "test.postgres": ["cmd FULL_TEST=true mix test --only postgres"],
       "test.mysql": ["cmd FULL_TEST=true MYSQL_TEST=true mix test --only mysql"],
       "test.mssql": ["cmd FULL_TEST=true MSSQL_TEST=true mix test --only mssql"],
       "test.duckdb": ["cmd DUCKDB_TEST=true mix test --only duckdb"],
-      
+
       # Watch mode for unit tests
       "test.watch.unit": ["test.watch --only unit"]
     ]
@@ -128,13 +128,13 @@ defmodule Yesql.Mixfile do
       {:jamdb_oracle, "~> 0.5", optional: true},
       # SQLite driver
       {:exqlite, "~> 0.13", optional: true},
-      
+
       # JSON encoder/decoder (required by Postgrex for jsonb types)
       {:jason, "~> 1.0", optional: true},
 
       # Parser generator
       {:nimble_parsec, "~> 1.4", runtime: false},
-      
+
       # Development dependencies
       # Automatic testing tool
       {:mix_test_watch, ">= 0.0.0", only: :dev},
