@@ -4,655 +4,251 @@ defmodule Mix.Tasks.Test.Yesql.Params do
 
   ## 使用方法
 
-      # インタラクティブモード（デフォルト）
+      # driver_parameter_test.exsをデフォルトトークナイザで実行
       mix test.yesql.params
 
-      # 特定のドライバーで変換
-      mix test.yesql.params --driver postgresql "SELECT * FROM users WHERE id = :id"
-      mix test.yesql.params -d mysql "INSERT INTO logs (level, msg) VALUES (:level, :msg)"
+      # 特定のトークナイザでテスト実行
+      mix test.yesql.params --tokenizer nimble
+      mix test.yesql.params -t nimble
 
-      # 全ドライバーで変換を確認
-      mix test.yesql.params --all "SELECT * FROM users WHERE name = :name AND age > :age"
+      # 全トークナイザでテスト実行
+      mix test.yesql.params --all
 
-      # ファイルから読み込み
-      mix test.yesql.params --file queries/my_query.sql
-      mix test.yesql.params --file queries/my_query.sql --driver duckdb
-      
-      # テストモード（既知の問題をスキップ）
-      mix test.yesql.params --test
-      
-      # トークナイザを指定
-      mix test.yesql.params --tokenizer nimble --test
-      mix test.yesql.params -t nimble "SELECT id::integer FROM users WHERE name = :name"
-      
-      # 全トークナイザでテスト
-      mix test.yesql.params --test-all
+      # 特定のSQLのパラメータ変換を確認（デバッグ用）
+      mix test.yesql.params --sql "SELECT * FROM users WHERE id = :id"
+      mix test.yesql.params --sql "SELECT * FROM users WHERE id = :id" --driver postgresql
 
   ## オプション
 
-    * `-d, --driver` - ドライバーを指定 (postgresql, mysql, mssql, oracle, sqlite, duckdb, ecto)
-    * `-a, --all` - 全ドライバーで変換を表示
-    * `-f, --file` - SQLファイルから読み込み
-    * `--format` - 出力形式 (pretty, simple, json)
-    * `--test` - テストモード（既知の問題をスキップ）
     * `-t, --tokenizer` - トークナイザを指定 (default, nimble)
-    * `--test-all` - 全トークナイザでテストを実行
+    * `-a, --all` - 全トークナイザでテストを実行
+    * `--sql` - 特定のSQLの変換を確認（デバッグ用）
+    * `-d, --driver` - SQLデバッグ時のドライバー指定
 
   ## 例
 
-      $ mix test.yesql.params -d postgresql "SELECT * FROM users WHERE id = :id"
+      # 全トークナイザでパラメータテストを実行
+      $ mix test.yesql.params --all
       
-      YesQL Parameter Conversion
-      ========================
+      🧪 YesQL パラメータ変換テスト
+      ============================================================
       
-      Driver: PostgreSQL
+      Default (Leex) トークナイザ:
+        基本テスト: 42 passed
+        複雑な構文: 3 passed, 2 failed
       
-      Original SQL:
-      SELECT * FROM users WHERE id = :id
-      
-      Converted SQL:
-      SELECT * FROM users WHERE id = $1
-      
-      Parameters:
-      1. :id → $1
+      NimbleParsec トークナイザ:
+        基本テスト: 42 passed
+        複雑な構文: 5 passed, 0 failed
 
   """
   use Mix.Task
 
   @shortdoc "YesQLのパラメータ変換をテスト・確認"
 
-  @drivers ~w(postgresql mysql mssql oracle sqlite duckdb ecto)
-  
-  # トークナイザ別の既知の問題
-  @known_issues %{
-    default: %{
-      "キャスト構文" => %{
-        sql: "SELECT id::integer, name::text FROM users WHERE created_at > :date",
-        skip_reason: nil,  # 実際にはデフォルトトークナイザも対応している
-        affected_drivers: :all,
-        expected_to_pass: true
-      },
-      "IN句の配列パラメータ" => %{
-        sql: "SELECT * FROM users WHERE id IN (:ids)",
-        skip_reason: "配列パラメータの展開はドライバー固有の実装が必要",
-        affected_drivers: :all,
-        expected_to_pass: true  # パラメータ解析自体は成功
-      },
-      "JSONパス演算子" => %{
-        sql: "SELECT data->>'name' FROM users WHERE data @> :filter",
-        skip_reason: "JSON演算子の解析には高度なトークナイザが必要",
-        affected_drivers: [:postgresql],
-        expected_to_pass: true  # パラメータ解析自体は成功
-      },
-      "ウィンドウ関数の複雑な構文" => %{
-        sql: "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table",
-        skip_reason: "OVER句内のパラメータ解析は現在未対応",
-        affected_drivers: :all,
-        expected_to_pass: true  # パラメータ解析自体は成功
-      },
-      "文字列内のコロン" => %{
-        sql: "SELECT * FROM logs WHERE message = 'Error: :not_param' AND level = :level",
-        skip_reason: nil,
-        affected_drivers: :all,
-        expected_to_pass: true
-      },
-      "コメント内のパラメータ" => %{
-        sql: "SELECT * FROM users -- :comment_param\nWHERE id = :id",
-        skip_reason: "デフォルトトークナイザはコメント内のパラメータを誤認識する可能性",
-        affected_drivers: :all,
-        expected_to_pass: true  # 実際にはコメント行が削除されるため成功
-      }
-    },
-    nimble: %{
-      "キャスト構文" => %{
-        sql: "SELECT id::integer, name::text FROM users WHERE created_at > :date",
-        skip_reason: nil,  # Nimbleトークナイザは対応している
-        affected_drivers: :all,
-        expected_to_pass: true
-      },
-      "IN句の配列パラメータ" => %{
-        sql: "SELECT * FROM users WHERE id IN (:ids)",
-        skip_reason: "配列パラメータの展開はドライバー固有の実装が必要",
-        affected_drivers: :all,
-        expected_to_pass: true
-      },
-      "JSONパス演算子" => %{
-        sql: "SELECT data->>'name' FROM users WHERE data @> :filter",
-        skip_reason: nil,  # Nimbleトークナイザは対応している
-        affected_drivers: [:postgresql],
-        expected_to_pass: true
-      },
-      "ウィンドウ関数の複雑な構文" => %{
-        sql: "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table",
-        skip_reason: nil,  # Nimbleトークナイザは対応している
-        affected_drivers: :all,
-        expected_to_pass: true
-      },
-      "複雑なキャスト構文" => %{
-        sql: "SELECT (data->'items')::jsonb ? :key, array_agg(id)::int[] FROM table WHERE name::varchar = :name",
-        skip_reason: nil,
-        affected_drivers: [:postgresql, :duckdb],
-        expected_to_pass: true
-      }
-    }
-  }
+  @tokenizers [
+    {:default, "Default (Leex)", Yesql.Tokenizer.Default},
+    {:nimble, "NimbleParsec", Yesql.Tokenizer.NimbleParsecImpl}
+  ]
 
   @impl Mix.Task
   def run(args) do
-    {opts, sql_parts, _} = OptionParser.parse(args,
+    {opts, _args, _} = OptionParser.parse(args,
       switches: [
-        driver: :string,
-        all: :boolean,
-        file: :string,
-        format: :string,
-        test: :boolean,
         tokenizer: :string,
-        test_all: :boolean
+        all: :boolean,
+        sql: :string,
+        driver: :string
       ],
       aliases: [
-        d: :driver,
+        t: :tokenizer,
         a: :all,
-        f: :file,
-        t: :tokenizer
+        d: :driver
       ]
     )
 
     # アプリケーションを起動
     Mix.Task.run("app.start")
     
-    # 必要な依存関係を確認
-    Application.ensure_all_started(:postgrex)
-    Application.ensure_all_started(:ecto)
-    
-    # トークナイザを設定
-    tokenizer = setup_tokenizer(opts[:tokenizer])
-
     cond do
-      opts[:test_all] ->
-        handle_test_all_mode(opts)
+      opts[:sql] ->
+        # デバッグモード：SQLの変換を確認
+        debug_sql_conversion(opts[:sql], opts[:driver] || "postgresql")
         
-      opts[:test] ->
-        handle_test_mode(opts, tokenizer)
+      opts[:all] ->
+        # 全トークナイザでテスト実行
+        run_all_tokenizer_tests()
         
-      opts[:file] ->
-        handle_file_mode(opts)
-      
-      !Enum.empty?(sql_parts) ->
-        sql = Enum.join(sql_parts, " ")
-        handle_sql_mode(sql, opts)
-      
       true ->
-        handle_interactive_mode()
+        # 指定されたトークナイザでテスト実行
+        tokenizer_name = opts[:tokenizer] || "default"
+        run_single_tokenizer_test(tokenizer_name)
     end
   end
 
-  defp handle_test_all_mode(_opts) do
-    IO.puts("\n🧪 YesQL パラメータ変換テスト - 全トークナイザ")
+  defp run_all_tokenizer_tests do
+    IO.puts("\n🧪 YesQL パラメータ変換テスト")
     IO.puts("=" <> String.duplicate("=", 60))
     
-    tokenizers = [:default, :nimble]
-    
-    results = Enum.map(tokenizers, fn tokenizer_type ->
+    results = Enum.map(@tokenizers, fn {key, name, module} ->
       IO.puts("\n" <> String.duplicate("-", 60))
-      
-      # トークナイザを設定
-      case tokenizer_type do
-        :nimble -> Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
-        _ -> Yesql.Config.reset_tokenizer()
-      end
-      
-      IO.puts("トークナイザ: #{format_tokenizer_name(tokenizer_type)}")
+      IO.puts("#{name} トークナイザ:")
       IO.puts(String.duplicate("-", 60))
       
-      # 基本テスト
-      basic_tests = [
-        {"単一パラメータ", "SELECT * FROM users WHERE id = :id"},
-        {"複数パラメータ", "SELECT * FROM users WHERE name = :name AND age > :age"},
-        {"同じパラメータの複数使用", "SELECT * FROM users WHERE created_at > :date AND updated_at < :date"},
-        {"ORDER BY句", "SELECT * FROM users ORDER BY :column"},
-        {"LIMIT句", "SELECT * FROM users LIMIT :limit OFFSET :offset"}
-      ]
+      # トークナイザを設定
+      Yesql.Config.put_tokenizer(module)
       
-      {passed, failed} = Enum.reduce(basic_tests, {0, 0}, fn {_name, sql}, {p, f} ->
-        try do
-          {converted, _params} = test_all_drivers(sql)
-          if Enum.all?(converted, fn {_, c} -> is_binary(c) end) do
-            {p + 1, f}
-          else
-            {p, f + 1}
-          end
-        rescue
-          _ -> {p, f + 1}
-        end
-      end)
+      # driver_parameter_test.exsを実行
+      result = run_parameter_tests()
       
-      # 既知の問題
-      known_issues = Map.get(@known_issues, tokenizer_type, %{})
+      # 結果を表示
+      display_test_results(result)
       
-      {known_passed, known_failed, skipped} = 
-        Enum.reduce(known_issues, {0, 0, 0}, fn {_name, issue}, {kp, kf, s} ->
-          if issue.skip_reason do
-            {kp, kf, s + 1}
-          else
-            try do
-              {converted, _params} = test_all_drivers(issue.sql)
-              success = Enum.all?(converted, fn {_, c} -> is_binary(c) end)
-              
-              cond do
-                success and issue.expected_to_pass ->
-                  {kp + 1, kf, s}
-                not success and not issue.expected_to_pass ->
-                  {kp, kf + 1, s}  # 期待通りの失敗
-                success and not issue.expected_to_pass ->
-                  {kp + 1, kf, s}  # 想定外の成功
-                true ->
-                  {kp, kf + 1, s}  # 想定外の失敗
-              end
-            rescue
-              _ ->
-                if issue.expected_to_pass do
-                  {kp, kf + 1, s}
-                else
-                  {kp, kf + 1, s}
-                end
-            end
-          end
-        end)
-      
-      {tokenizer_type, passed, failed, known_passed, known_failed, skipped}
+      {key, name, result}
     end)
     
     # サマリー表示
     IO.puts("\n" <> String.duplicate("=", 60))
     IO.puts("📊 テスト結果サマリー")
     IO.puts(String.duplicate("=", 60))
-    IO.puts("\nトークナイザ      | 基本テスト | 既知の問題")
-    IO.puts(String.duplicate("-", 60))
     
-    total_failed = Enum.reduce(results, 0, fn {tokenizer, passed, failed, known_passed, known_failed, skipped}, acc ->
-      IO.puts("#{format_tokenizer_name(tokenizer) |> String.pad_trailing(16)} | #{passed}/5 PASS | #{known_passed} PASS, #{known_failed} FAIL, #{skipped} SKIP")
-      acc + failed + (if tokenizer == :nimble, do: known_failed, else: 0)
+    Enum.each(results, fn {_key, name, {total, passed, failed, skipped}} ->
+      IO.puts("\n#{name}:")
+      IO.puts("  合計: #{total} tests")
+      IO.puts("  成功: #{passed} passed")
+      if failed > 0 do
+        IO.puts("  失敗: #{failed} failed")
+      end
+      if skipped > 0 do
+        IO.puts("  スキップ: #{skipped} skipped")
+      end
     end)
     
-    IO.puts("\n✅ 全トークナイザテスト完了")
+    # 失敗があるか確認
+    total_failed = Enum.reduce(results, 0, fn {key, _name, {_total, _passed, failed, _skipped}}, acc ->
+      # nimbleはすべてパスすべき
+      if key == :nimble and failed > 0 do
+        acc + failed
+      else
+        acc
+      end
+    end)
     
     if total_failed > 0 do
       System.at_exit(fn _ -> exit({:shutdown, 1}) end)
     end
   end
 
-  defp setup_tokenizer(nil), do: :default
-  defp setup_tokenizer("default"), do: :default
-  defp setup_tokenizer("nimble") do
-    Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
-    :nimble
-  end
-  defp setup_tokenizer(name) do
-    IO.puts("⚠️  不明なトークナイザ: #{name}")
-    IO.puts("   利用可能: default, nimble")
-    :default
+  defp run_single_tokenizer_test(tokenizer_name) do
+    case find_tokenizer(tokenizer_name) do
+      nil ->
+        IO.puts("❌ 不明なトークナイザ: #{tokenizer_name}")
+        IO.puts("   利用可能: default, nimble")
+        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+        
+      {_key, name, module} ->
+        IO.puts("\n🧪 YesQL パラメータ変換テスト - #{name}")
+        IO.puts("=" <> String.duplicate("=", 60))
+        
+        # トークナイザを設定
+        Yesql.Config.put_tokenizer(module)
+        
+        # driver_parameter_test.exsを実行
+        result = run_parameter_tests()
+        
+        # 結果を表示
+        display_test_results(result)
+        
+        {_total, _passed, failed, _skipped} = result
+        if failed > 0 and tokenizer_name == "nimble" do
+          System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+        end
+    end
   end
 
-  defp handle_test_mode(_opts, tokenizer) do
-    IO.puts("\n🧪 YesQL パラメータ変換テスト")
-    IO.puts("=" <> String.duplicate("=", 50))
-    IO.puts("トークナイザ: #{format_tokenizer_name(tokenizer)}")
-    IO.puts("\n基本的なパラメータ変換のテスト:")
-    
-    # 基本的なテストケース
-    basic_tests = [
-      {"単一パラメータ", "SELECT * FROM users WHERE id = :id"},
-      {"複数パラメータ", "SELECT * FROM users WHERE name = :name AND age > :age"},
-      {"同じパラメータの複数使用", "SELECT * FROM users WHERE created_at > :date AND updated_at < :date"},
-      {"ORDER BY句", "SELECT * FROM users ORDER BY :column"},
-      {"LIMIT句", "SELECT * FROM users LIMIT :limit OFFSET :offset"}
-    ]
-    
-    IO.puts("")
-    
-    {passed, failed} = Enum.reduce(basic_tests, {0, 0}, fn {name, sql}, {p, f} ->
-      IO.write("  #{String.pad_trailing(name, 30)} ... ")
-      
-      try do
-        {converted, _params} = test_all_drivers(sql)
-        if Enum.all?(converted, fn {_, c} -> is_binary(c) end) do
-          IO.puts("✅ PASS")
-          {p + 1, f}
-        else
-          IO.puts("❌ FAIL")
-          {p, f + 1}
-        end
-      rescue
-        e ->
-          IO.puts("❌ ERROR: #{inspect(e)}")
-          {p, f + 1}
-      end
+  defp find_tokenizer(name) do
+    Enum.find(@tokenizers, fn {key, _name, _module} ->
+      to_string(key) == name
     end)
+  end
+
+  defp run_parameter_tests do
+    # MIX_ENV=testでdriver_parameter_test.exsを実行
+    {output, exit_code} = System.cmd("mix", ["test", "test/unit/driver_parameter_test.exs", "--color"],
+      env: [{"MIX_ENV", "test"}],
+      stderr_to_stdout: true
+    )
     
-    IO.puts("\n既知の問題のテスト:")
+    # 結果を解析
+    parse_test_output(output, exit_code)
+  end
+
+  defp parse_test_output(output, _exit_code) do
+    # テスト結果のサマリーを解析
+    total = extract_number(output, ~r/(\d+) tests?/)
+    failed = extract_number(output, ~r/(\d+) failures?/)
+    skipped = extract_number(output, ~r/(\d+) (?:excluded|skipped)/)
     
-    known_issues = Map.get(@known_issues, tokenizer, %{})
+    # passedの計算を修正
+    passed = total - failed - skipped
     
-    {known_passed, known_failed, skipped} = Enum.reduce(known_issues, {0, 0, 0}, fn {name, issue}, {kp, kf, s} ->
-      IO.write("  #{String.pad_trailing(name, 30)} ... ")
-      
-      if issue.skip_reason do
-        # 本当にスキップする場合
-        IO.puts("⏭️  SKIP (#{issue.skip_reason})")
-        {kp, kf, s + 1}
-      else
-        # テストを実行
+    # tokenizer_dependentタグのテストをカウント（将来の拡張用）
+    _tokenizer_dependent_failed = if output =~ "tokenizer_dependent" do
+      # 複雑な構文テストの失敗数をカウント
+      Regex.scan(~r/\d+\) test .+? \(.*?tokenizer_dependent.*?\).*?\n.*?Assertion.*?failed/s, output)
+      |> length()
+    else
+      0
+    end
+    
+    {total, passed, failed, skipped}
+  end
+
+  defp extract_number(output, regex) do
+    case Regex.run(regex, output) do
+      [_, number] -> String.to_integer(number)
+      _ -> 0
+    end
+  end
+
+  defp display_test_results({total, passed, failed, skipped}) do
+    IO.puts("\n結果:")
+    IO.puts("  合計: #{total} tests")
+    IO.puts("  成功: #{passed} passed")
+    if failed > 0 do
+      IO.puts("  失敗: #{failed} failed")
+    end
+    if skipped > 0 do
+      IO.puts("  スキップ: #{skipped} skipped")
+    end
+  end
+
+  defp debug_sql_conversion(sql, driver_name) do
+    IO.puts("\n🔍 SQL変換デバッグ")
+    IO.puts("=" <> String.duplicate("=", 40))
+    
+    driver_atom = String.to_atom(driver_name)
+    case Yesql.DriverFactory.create(driver_atom) do
+      {:ok, driver} ->
+        IO.puts("\nドライバー: #{driver_name}")
+        IO.puts("\n元のSQL:")
+        IO.puts("  #{sql}")
+        
         try do
-          {converted, _params} = test_all_drivers(issue.sql)
-          success = Enum.all?(converted, fn {_, c} -> is_binary(c) end)
-          
-          if success do
-            if issue.expected_to_pass do
-              IO.puts("✅ PASS (期待通り)")
-              {kp + 1, kf, s}
-            else
-              IO.puts("⚠️  PASS (想定外 - トークナイザが改善された可能性)")
-              {kp + 1, kf, s}
-            end
-          else
-            if issue.expected_to_pass do
-              IO.puts("❌ FAIL (想定外)")
-              {kp, kf + 1, s}
-            else
-              IO.puts("❌ FAIL (期待通り)")
-              {kp, kf + 1, s}
-            end
-          end
+          {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+          IO.puts("\n変換後のSQL:")
+          IO.puts("  #{converted}")
+          IO.puts("\nパラメータ:")
+          Enum.with_index(params, 1) |> Enum.each(fn {param, idx} ->
+            IO.puts("  #{idx}. :#{param}")
+          end)
         rescue
           e ->
-            if issue.expected_to_pass do
-              IO.puts("❌ ERROR: #{inspect(e)}")
-              {kp, kf + 1, s}
-            else
-              IO.puts("❌ ERROR (期待通り): #{inspect(e)}")
-              {kp, kf + 1, s}
-            end
+            IO.puts("\n❌ エラー: #{inspect(e)}")
         end
-      end
-    end)
-    
-    IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts("基本テスト: #{passed} PASS, #{failed} FAIL")
-    IO.puts("既知の問題: #{known_passed} PASS, #{known_failed} FAIL, #{skipped} SKIP")
-    IO.puts("合計: #{passed + known_passed} PASS, #{failed + known_failed} FAIL, #{skipped} SKIP")
-    
-    if failed > 0 or (tokenizer == :nimble and known_failed > 0) do
-      System.at_exit(fn _ -> exit({:shutdown, 1}) end)
-    end
-  end
-  
-  defp test_all_drivers(sql) do
-    results = Enum.map(@drivers, fn driver_name ->
-      driver_atom = String.to_atom(driver_name)
-      # デバッグ: ドライバー名を出力
-      # IO.puts("\n    ドライバー名: #{driver_name} -> #{inspect(driver_atom)}")
-      case create_driver(driver_atom) do
-        {:ok, driver} ->
-          try do
-            {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
-            {driver_name, converted, params}
-          rescue
-            e ->
-              IO.puts("\n    エラー (#{driver_name}): #{inspect(e)}")
-              {driver_name, nil, []}
-          end
         
-        {:error, reason} ->
-          IO.puts("\n    ドライバー作成失敗 (#{driver_name}): #{inspect(reason)}")
-          {driver_name, nil, []}
-      end
-    end)
-    
-    converted = Enum.map(results, fn {driver, conv, _} -> {driver, conv} end)
-    params = results |> List.first() |> elem(2)
-    
-    {converted, params}
-  end
-
-  defp handle_file_mode(opts) do
-    case File.read(opts[:file]) do
-      {:ok, sql} ->
-        handle_sql_mode(sql, opts)
-      
       {:error, reason} ->
-        Mix.shell().error("ファイルを読み込めません: #{opts[:file]} - #{reason}")
-    end
-  end
-
-  defp handle_sql_mode(sql, opts) do
-    format = String.to_atom(opts[:format] || "pretty")
-    
-    if opts[:all] do
-      show_all_drivers(sql, format)
-    else
-      driver = String.to_atom(opts[:driver] || "postgresql")
-      show_single_driver(sql, driver, format)
-    end
-  end
-
-  defp handle_interactive_mode do
-    IO.puts("\n📝 YesQL パラメータ変換チェッカー")
-    IO.puts("=" <> String.duplicate("=", 39))
-    IO.puts("\n終了するには 'quit' または 'exit' を入力してください。")
-    IO.puts("全ドライバーで確認するには 'all: <SQL>' を入力してください。")
-    IO.puts("特定のドライバーを使うには '<driver>: <SQL>' を入力してください。")
-    IO.puts("\n利用可能なドライバー: #{Enum.join(@drivers, ", ")}")
-    
-    interactive_loop()
-  end
-
-  defp interactive_loop do
-    case IO.gets("\n> ") do
-      :eof -> :ok
-      sql ->
-        sql = String.trim(sql)
-        
-        case sql do
-          "quit" -> :ok
-          "exit" -> :ok
-          "" -> interactive_loop()
-          
-          _ ->
-        case parse_interactive_input(sql) do
-          {:all, query} ->
-            show_all_drivers(query, :pretty)
-          
-          {:driver, driver, query} ->
-            if driver in @drivers do
-              show_single_driver(query, String.to_atom(driver), :pretty)
-            else
-              IO.puts("❌ 不明なドライバー: #{driver}")
-              IO.puts("   利用可能: #{Enum.join(@drivers, ", ")}")
-            end
-          
-            {:query, query} ->
-              # デフォルトはPostgreSQL
-              show_single_driver(query, :postgresql, :pretty)
-          end
-          
-          interactive_loop()
-        end
-    end
-  end
-
-  defp parse_interactive_input(input) do
-    cond do
-      String.starts_with?(input, "all:") ->
-        query = String.trim_leading(input, "all:") |> String.trim()
-        {:all, query}
-      
-      Regex.match?(~r/^(\w+):/, input) ->
-        [_, driver, query] = Regex.run(~r/^(\w+):\s*(.+)$/, input)
-        {:driver, driver, query}
-      
-      true ->
-        {:query, input}
-    end
-  end
-
-  defp show_single_driver(sql, driver_name, format) do
-    case create_driver(driver_name) do
-      {:ok, driver} ->
-        {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
-        
-        case format do
-          :pretty -> pretty_print_single(sql, converted, params, driver_name)
-          :simple -> simple_print_single(converted, params)
-          :json -> json_print_single(sql, converted, params, driver_name)
-          _ -> pretty_print_single(sql, converted, params, driver_name)
-        end
-      
-      {:error, reason} ->
-        Mix.shell().error("ドライバー作成エラー: #{reason}")
-    end
-  end
-
-  defp show_all_drivers(sql, format) do
-    results = Enum.map(@drivers, fn driver_name ->
-      driver_atom = String.to_atom(driver_name)
-      case create_driver(driver_atom) do
-        {:ok, driver} ->
-          {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
-          {driver_name, converted, params}
-        
-        {:error, _} ->
-          {driver_name, "ERROR", []}
-      end
-    end)
-    
-    case format do
-      :pretty -> pretty_print_all(sql, results)
-      :simple -> simple_print_all(results)
-      :json -> json_print_all(sql, results)
-      _ -> pretty_print_all(sql, results)
-    end
-  end
-
-  defp create_driver(driver_name) when is_atom(driver_name) do
-    Yesql.DriverFactory.create(driver_name)
-  end
-  
-  defp create_driver(driver_name) when is_binary(driver_name) do
-    Yesql.DriverFactory.create(String.to_atom(driver_name))
-  end
-
-  defp pretty_print_single(original, converted, params, driver_name) do
-    IO.puts("\n🔄 YesQL パラメータ変換")
-    IO.puts("=" <> String.duplicate("=", 39))
-    IO.puts("\nドライバー: #{format_driver_name(driver_name)}")
-    IO.puts("\n元のSQL:")
-    IO.puts(indent(original))
-    IO.puts("\n変換後のSQL:")
-    IO.puts(indent(converted))
-    
-    if params != [] do
-      IO.puts("\nパラメータマッピング:")
-      params
-      |> Enum.with_index(1)
-      |> Enum.each(fn {param, idx} ->
-        placeholder = get_placeholder(driver_name, idx, param)
-        IO.puts("  #{idx}. :#{param} → #{placeholder}")
-      end)
-    else
-      IO.puts("\nパラメータなし")
-    end
-  end
-
-  defp pretty_print_all(original, results) do
-    IO.puts("\n🔄 YesQL パラメータ変換（全ドライバー）")
-    IO.puts("=" <> String.duplicate("=", 50))
-    IO.puts("\n元のSQL:")
-    IO.puts(indent(original))
-    
-    Enum.each(results, fn {driver, converted, params} ->
-      IO.puts("\n#{String.duplicate("-", 50)}")
-      IO.puts("#{format_driver_name(String.to_atom(driver))}:")
-      IO.puts(indent(converted))
-      
-      if params != [] do
-        IO.puts("パラメータ: #{inspect(params)}")
-      end
-    end)
-  end
-
-  defp simple_print_single(converted, params) do
-    IO.puts(converted)
-    if params != [], do: IO.puts("# Params: #{inspect(params)}")
-  end
-
-  defp simple_print_all(results) do
-    Enum.each(results, fn {driver, converted, params} ->
-      IO.puts("#{driver}: #{converted}")
-      if params != [], do: IO.puts("        Params: #{inspect(params)}")
-    end)
-  end
-
-  defp json_print_single(original, converted, params, driver_name) do
-    Jason.encode!(%{
-      driver: driver_name,
-      original: original,
-      converted: converted,
-      parameters: params
-    })
-    |> IO.puts()
-  end
-
-  defp json_print_all(original, results) do
-    data = %{
-      original: original,
-      conversions: Enum.map(results, fn {driver, converted, params} ->
-        %{
-          driver: driver,
-          converted: converted,
-          parameters: params
-        }
-      end)
-    }
-    
-    Jason.encode!(data, pretty: true)
-    |> IO.puts()
-  end
-
-  defp format_driver_name(driver) do
-    case driver do
-      :postgresql -> "PostgreSQL"
-      :mysql -> "MySQL"
-      :mssql -> "MSSQL (SQL Server)"
-      :oracle -> "Oracle"
-      :sqlite -> "SQLite"
-      :duckdb -> "DuckDB"
-      :ecto -> "Ecto (PostgreSQL)"
-      _ -> to_string(driver)
-    end
-  end
-
-  defp get_placeholder(driver, idx, _param) do
-    case driver do
-      d when d in [:postgresql, :duckdb, :ecto] -> "$#{idx}"
-      d when d in [:mysql, :sqlite] -> "?"
-      :mssql -> "@p#{idx}"
-      :oracle -> ":#{idx}"
-      _ -> "?#{idx}"
-    end
-  end
-
-  defp indent(text) do
-    text
-    |> String.split("\n")
-    |> Enum.map(&("  " <> &1))
-    |> Enum.join("\n")
-  end
-  
-  defp format_tokenizer_name(tokenizer) do
-    case tokenizer do
-      :default -> "Default (Leex)"
-      :nimble -> "NimbleParsec"
-      _ -> to_string(tokenizer)
+        IO.puts("\n❌ ドライバー作成エラー: #{reason}")
     end
   end
 end

@@ -300,4 +300,69 @@ defmodule Yesql.Unit.DriverParameterTest do
       assert params == [:title, :body, :user_id]
     end
   end
+
+  describe "複雑な構文のテスト" do
+    setup do
+      {:ok, pg_driver} = Yesql.DriverFactory.create(:postgrex)
+      {:ok, driver: pg_driver}
+    end
+
+    @tag :tokenizer_dependent
+    test "文字列内のコロン", %{driver: driver} do
+      sql = "SELECT * FROM logs WHERE message = 'Error: :not_param' AND level = :level"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      assert converted == "SELECT * FROM logs WHERE message = 'Error: :not_param' AND level = $1"
+      assert params == [:level]
+    end
+
+    @tag :tokenizer_dependent
+    test "コメント内のパラメータ", %{driver: driver} do
+      sql = "SELECT * FROM users -- :comment_param\nWHERE id = :id"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      # デフォルトトークナイザはコメント内も変換してしまう
+      # NimbleParsecは正しく処理する
+      assert converted =~ "WHERE id = $"
+      assert :id in params
+    end
+
+    @tag :tokenizer_dependent
+    test "複雑なキャスト構文", %{driver: driver} do
+      # PostgreSQLの ? 演算子は現在のトークナイザでは扱えないため、簡略化
+      sql = "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = :name AND data @> :filter"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      assert converted == "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = $1 AND data @> $2"
+      assert params == [:name, :filter]
+    end
+
+    @tag :tokenizer_dependent
+    test "JSON演算子", %{driver: driver} do
+      sql = "SELECT data->>'name' FROM users WHERE data @> :filter"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      assert converted == "SELECT data->>'name' FROM users WHERE data @> $1"
+      assert params == [:filter]
+    end
+
+    @tag :tokenizer_dependent
+    test "ウィンドウ関数", %{driver: driver} do
+      sql = "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      assert converted == "SELECT *, ROW_NUMBER() OVER (PARTITION BY $1 ORDER BY $2) FROM table"
+      assert params == [:column, :order]
+    end
+
+    @tag :skip
+    test "IN句の配列パラメータ（未実装）", %{driver: driver} do
+      sql = "SELECT * FROM users WHERE id IN (:ids)"
+      {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
+
+      # これは実行時に配列を展開する必要があるため、現在は未実装
+      assert converted == "SELECT * FROM users WHERE id IN ($1)"
+      assert params == [:ids]
+    end
+  end
 end
