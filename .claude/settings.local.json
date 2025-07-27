@@ -89,7 +89,8 @@
       "Bash(export FULL_TEST=true)",
       "Bash(export POSTGRES_HOST=localhost)",
       "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs --include integration)",
-      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:132)"
+      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:132)",
+      "Bash(SETUP_DB_WITH_ECTO=true FULL_TEST=true POSTGRES_HOST=localhost mix test test/test_helper.exs)"
     ],
     "deny": []
   }

@@ -4,6 +4,11 @@ case Application.ensure_all_started(:postgrex) do
   {:error, _} -> :ok
 end
 
+case Application.ensure_all_started(:ecto_sql) do
+  {:ok, _} -> :ok
+  {:error, _} -> :ok
+end
+
 # DuckDBテストが有効な場合のみDuckDBexを起動
 if System.get_env("DUCKDB_TEST") == "true" do
   {:ok, _} = Application.ensure_all_started(:duckdbex)
@@ -25,6 +30,13 @@ end
 
 # CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
 if System.get_env("CI") || System.get_env("FULL_TEST") do
+  # Docker環境でのテスト時にデータベースをセットアップ
+  if System.get_env("SETUP_DB_WITH_ECTO") == "true" do
+    IO.puts("\n🔧 Ectoを使用してデータベースをセットアップ\n")
+    Yesql.EctoTestHelper.ensure_database_exists("postgres")
+    Yesql.EctoTestHelper.ensure_database_exists("mysql")
+    Yesql.EctoTestHelper.ensure_database_exists("mssql")
+  end
   ExUnit.start()
 else
   # ローカル環境では単体テストのみ実行

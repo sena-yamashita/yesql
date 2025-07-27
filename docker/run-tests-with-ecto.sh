@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Docker環境でYesQLのテストを実行するスクリプト
+# Ectoを使用したテスト環境セットアップ付きテスト実行スクリプト
 
 set -e
 
@@ -10,7 +10,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}=== YesQL Docker Test Runner ===${NC}"
+echo -e "${GREEN}=== YesQL Docker Test Runner with Ecto Setup ===${NC}"
 
 # 引数のパース
 TEST_TYPE="${1:-all}"
@@ -72,7 +72,11 @@ mix deps.get
 
 # Ectoを使ったデータベースセットアップ
 echo -e "\n${YELLOW}Setting up databases with Ecto...${NC}"
-FULL_TEST=true mix run -e "Yesql.TestSetup.setup_all_databases()"
+export SETUP_DB_WITH_ECTO=true
+export FULL_TEST=true
+
+# test_helper.exsを実行してデータベースを初期化
+mix run test/test_helper.exs
 
 # テストの実行
 case "$TEST_TYPE" in
