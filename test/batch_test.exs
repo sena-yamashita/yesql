@@ -19,21 +19,7 @@ defmodule BatchTest do
             port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
           )
 
-        # テーブル作成
-        Postgrex.query!(conn, "DROP TABLE IF EXISTS batch_test CASCADE", [])
-
-        Postgrex.query!(
-          conn,
-          """
-          CREATE TABLE batch_test (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(255),
-            value INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-          """,
-          []
-        )
+        # テーブルはマイグレーションで作成されるため、ここでは作成しない
 
         [conn: conn, driver: :postgrex]
 
@@ -42,11 +28,19 @@ defmodule BatchTest do
     end
   end
 
+  setup context do
+    # 各テストの前にテーブルをクリア
+    case context do
+      %{conn: conn} when not is_nil(conn) ->
+        Postgrex.query!(conn, "DELETE FROM batch_test", [])
+        :ok
+      _ ->
+        :ok
+    end
+  end
+
   describe "バッチクエリ実行" do
     test "複数クエリの成功実行", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-      
       queries = [
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Item1", 100]},
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Item2", 200]},
@@ -63,9 +57,6 @@ defmodule BatchTest do
     end
 
     test "トランザクション内でのエラー処理", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       queries = [
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Valid", 100]},
         # エラー
@@ -89,9 +80,6 @@ defmodule BatchTest do
     end
 
     test "トランザクションなしでのエラー処理", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       queries = [
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Valid1", 100]},
         # エラー
@@ -114,9 +102,6 @@ defmodule BatchTest do
     end
 
     test "エラー時の続行オプション", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       queries = [
         {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Valid1", 100]},
         # エラー
@@ -146,9 +131,6 @@ defmodule BatchTest do
 
   describe "名前付きバッチクエリ" do
     test "名前付きクエリの実行", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       named_queries = %{
         insert_alice: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Alice", 100]},
         insert_bob: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Bob", 200]},
@@ -186,9 +168,6 @@ defmodule BatchTest do
 
   describe "パイプライン実行" do
     test "前の結果を使った連鎖実行", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       pipeline = [
         # 最初のクエリ
         fn _ ->
@@ -261,9 +240,6 @@ defmodule BatchTest do
     end
 
     test "明示的なロールバック", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       result =
         Transaction.transaction(
           conn,
@@ -287,9 +263,6 @@ defmodule BatchTest do
     end
 
     test "セーブポイントの使用", %{conn: conn, driver: driver} do
-      # テーブルをクリア
-      Postgrex.query!(conn, "TRUNCATE batch_test", [])
-
       result =
         Transaction.transaction(
           conn,

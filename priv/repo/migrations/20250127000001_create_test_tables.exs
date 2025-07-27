@@ -35,6 +35,13 @@ defmodule Yesql.TestRepo.Migrations.CreateTestTables do
       timestamps()
     end
 
+    # batch_test テーブル（バッチ処理テスト用）
+    create_if_not_exists table(:batch_test) do
+      add :name, :string
+      add :value, :integer
+      add :created_at, :utc_datetime, default: fragment("CURRENT_TIMESTAMP")
+    end
+
     # インデックスの作成
     create_if_not_exists index(:users, [:age])
     create_if_not_exists index(:users, [:email])
@@ -48,6 +55,7 @@ defmodule Yesql.TestRepo.Migrations.CreateTestTables do
     drop_if_exists index(:users, [:email])
     drop_if_exists index(:users, [:age])
     
+    drop_if_exists table(:batch_test)
     drop_if_exists table(:large_data)
     drop_if_exists table(:products)
     drop_if_exists table(:cats)

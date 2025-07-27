@@ -82,17 +82,28 @@ defmodule Mix.Tasks.Yesql.Test.Setup do
   end
 
   defp setup_repo(repo, config) do
-    # 1. データベースを作成
+    # 1. データベースを削除（存在する場合）
+    Mix.shell().info("Dropping existing database...")
+    case drop_database(repo, config) do
+      :ok ->
+        Mix.shell().info("✓ Database dropped")
+      {:error, :already_down} ->
+        Mix.shell().info("✓ Database does not exist")
+      {:error, reason} ->
+        Mix.shell().info("⚠️  Could not drop database: #{inspect(reason)}")
+    end
+    
+    # 2. データベースを作成
     Mix.shell().info("Creating database...")
     case create_database(repo, config) do
       :ok ->
-        Mix.shell().info("✓ Database created or already exists")
+        Mix.shell().info("✓ Database created")
       {:error, reason} ->
         Mix.shell().error("✗ Failed to create database: #{inspect(reason)}")
         :error
     end
     
-    # 2. リポジトリを起動
+    # 3. リポジトリを起動
     case repo.start_link() do
       {:ok, _pid} ->
         Mix.shell().info("✓ Repository started")
@@ -103,7 +114,7 @@ defmodule Mix.Tasks.Yesql.Test.Setup do
         :error
     end
     
-    # 3. マイグレーションを実行
+    # 4. マイグレーションを実行
     Mix.shell().info("Running migrations...")
     
     # 共通マイグレーション
@@ -119,7 +130,7 @@ defmodule Mix.Tasks.Yesql.Test.Setup do
     
     Mix.shell().info("✓ Migrations completed")
     
-    # 4. シードデータを投入
+    # 5. シードデータを投入
     Mix.shell().info("Seeding data...")
     seed_path = "priv/repo/seeds.exs"
     
@@ -137,6 +148,16 @@ defmodule Mix.Tasks.Yesql.Test.Setup do
     case adapter.storage_up(config) do
       :ok -> :ok
       {:error, :already_up} -> :ok
+      error -> error
+    end
+  end
+  
+  defp drop_database(repo, config) do
+    adapter = repo.__adapter__()
+    
+    case adapter.storage_down(config) do
+      :ok -> :ok
+      {:error, :already_down} -> {:error, :already_down}
       error -> error
     end
   end
