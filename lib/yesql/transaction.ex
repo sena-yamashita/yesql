@@ -100,7 +100,7 @@ defmodule Yesql.Transaction do
     driver_name = Keyword.fetch!(opts, :driver)
 
     with {:ok, driver} <- DriverFactory.create(driver_name) do
-      rollback_to_savepoint(driver, conn, name)
+      do_rollback_to_savepoint(driver, conn, name)
     end
   end
 
@@ -111,7 +111,7 @@ defmodule Yesql.Transaction do
     driver_name = Keyword.fetch!(opts, :driver)
 
     with {:ok, driver} <- DriverFactory.create(driver_name) do
-      release_savepoint(driver, conn, name)
+      do_release_savepoint(driver, conn, name)
     end
   end
 
@@ -407,6 +407,112 @@ defmodule Yesql.Transaction do
     end
   else
     defp create_savepoint(%Yesql.Driver.SQLite{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  # セーブポイントまでロールバック
+
+  if Code.ensure_loaded?(Postgrex) do
+    defp do_rollback_to_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
+      Postgrex.query(conn, "ROLLBACK TO SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_rollback_to_savepoint(%Yesql.Driver.Postgrex{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(MyXQL) do
+    defp do_rollback_to_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
+      MyXQL.query(conn, "ROLLBACK TO SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_rollback_to_savepoint(%Yesql.Driver.MySQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Tds) do
+    defp do_rollback_to_savepoint(%Yesql.Driver.MSSQL{}, conn, name) do
+      Tds.query(conn, "ROLLBACK TRANSACTION #{name}", [])
+    end
+  else
+    defp do_rollback_to_savepoint(%Yesql.Driver.MSSQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp do_rollback_to_savepoint(%Yesql.Driver.Oracle{}, conn, name) do
+      Jamdb.Oracle.query(conn, "ROLLBACK TO #{name}", [])
+    end
+  else
+    defp do_rollback_to_savepoint(%Yesql.Driver.Oracle{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Exqlite) do
+    defp do_rollback_to_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
+      Exqlite.query(conn, "ROLLBACK TO SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_rollback_to_savepoint(%Yesql.Driver.SQLite{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  # セーブポイントを解放
+
+  if Code.ensure_loaded?(Postgrex) do
+    defp do_release_savepoint(%Yesql.Driver.Postgrex{}, conn, name) do
+      Postgrex.query(conn, "RELEASE SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_release_savepoint(%Yesql.Driver.Postgrex{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(MyXQL) do
+    defp do_release_savepoint(%Yesql.Driver.MySQL{}, conn, name) do
+      MyXQL.query(conn, "RELEASE SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_release_savepoint(%Yesql.Driver.MySQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Tds) do
+    defp do_release_savepoint(%Yesql.Driver.MSSQL{}, _conn, _name) do
+      # MSSQLはRELEASEサポートしない
+      {:ok, :not_supported}
+    end
+  else
+    defp do_release_savepoint(%Yesql.Driver.MSSQL{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Jamdb.Oracle) do
+    defp do_release_savepoint(%Yesql.Driver.Oracle{}, _conn, _name) do
+      # OracleもRELEASEサポートしない
+      {:ok, :not_supported}
+    end
+  else
+    defp do_release_savepoint(%Yesql.Driver.Oracle{}, _conn, _name) do
+      {:error, :driver_not_loaded}
+    end
+  end
+
+  if Code.ensure_loaded?(Exqlite) do
+    defp do_release_savepoint(%Yesql.Driver.SQLite{}, conn, name) do
+      Exqlite.query(conn, "RELEASE SAVEPOINT #{name}", [])
+    end
+  else
+    defp do_release_savepoint(%Yesql.Driver.SQLite{}, _conn, _name) do
       {:error, :driver_not_loaded}
     end
   end

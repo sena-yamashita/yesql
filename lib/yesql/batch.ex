@@ -182,23 +182,45 @@ defmodule Yesql.Batch do
   end
 
   defp execute_queries(driver, conn, [{sql, params} | rest], on_error, results) do
-    case Driver.execute(driver, conn, sql, params) do
-      {:ok, result} ->
-        processed_result =
-          case Driver.process_result(driver, {:ok, result}) do
-            {:ok, data} -> data
-            _ -> result
-          end
+    try do
+      case Driver.execute(driver, conn, sql, params) do
+        {:ok, result} ->
+          processed_result =
+            case Driver.process_result(driver, {:ok, result}) do
+              {:ok, data} -> data
+              _ -> result
+            end
 
-        execute_queries(driver, conn, rest, on_error, [processed_result | results])
+          execute_queries(driver, conn, rest, on_error, [processed_result | results])
 
-      {:error, _} = error when on_error == :continue ->
-        # エラーを記録して続行
-        execute_queries(driver, conn, rest, on_error, [error | results])
+        {:error, _} = error when on_error == :continue ->
+          # エラーを記録して続行
+          execute_queries(driver, conn, rest, on_error, [error | results])
 
-      {:error, reason} ->
-        # エラーで停止
-        {:error, reason, Enum.reverse(results)}
+        {:error, reason} ->
+          # エラーで停止
+          {:error, reason, Enum.reverse(results)}
+      end
+    rescue
+      e in DBConnection.EncodeError ->
+        if on_error == :continue do
+          # エラーを記録して続行
+          error = {:error, e.message}
+          execute_queries(driver, conn, rest, on_error, [error | results])
+        else
+          # エラーで停止
+          {:error, e.message, Enum.reverse(results)}
+        end
+        
+      e ->
+        if on_error == :continue do
+          # エラーを記録して続行
+          error = {:error, inspect(e)}
+          execute_queries(driver, conn, rest, on_error, [error | results])
+        else
+          # その他のエラーで停止
+          {:error, inspect(e), Enum.reverse(results)}
+        end
     end
   end
 
@@ -209,20 +231,28 @@ defmodule Yesql.Batch do
   defp execute_pipeline(driver, conn, [fn_head | fn_tail], results) do
     # 前の結果を使って次のクエリを生成
     last_result = List.first(results)
-    {sql, params} = fn_head.(last_result)
+    
+    try do
+      {sql, params} = fn_head.(last_result)
 
-    case Driver.execute(driver, conn, sql, params) do
-      {:ok, result} ->
-        processed_result =
-          case Driver.process_result(driver, {:ok, result}) do
-            {:ok, data} -> data
-            _ -> result
-          end
+      case Driver.execute(driver, conn, sql, params) do
+        {:ok, result} ->
+          processed_result =
+            case Driver.process_result(driver, {:ok, result}) do
+              {:ok, data} -> data
+              _ -> result
+            end
 
-        execute_pipeline(driver, conn, fn_tail, [processed_result | results])
+          execute_pipeline(driver, conn, fn_tail, [processed_result | results])
 
-      {:error, reason} ->
-        {:error, reason, Enum.reverse(results)}
+        {:error, reason} ->
+          {:error, reason, Enum.reverse(results)}
+      end
+    rescue
+      e in DBConnection.EncodeError ->
+        {:error, e.message, Enum.reverse(results)}
+      e ->
+        {:error, inspect(e), Enum.reverse(results)}
     end
   end
 

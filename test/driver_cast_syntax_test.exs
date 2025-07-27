@@ -68,10 +68,10 @@ defmodule DriverCastSyntaxTest do
       # Yesqlクエリの実行（::キャスト使用）
       {:ok, results} =
         PostgresQuery.postgres_cast(conn,
-          text_value: "789",
+          text_value: "123",
           int_value: 100,
-          jsonb_value: %{"test" => true},
-          array_value: [4, 5, 6]
+          jsonb_value: %{"key" => "value"},
+          array_value: [1, 2, 3]
         )
 
       assert length(results) > 0
@@ -82,22 +82,25 @@ defmodule DriverCastSyntaxTest do
       # より複雑なキャストのテスト
       sql = """
       SELECT 
-        :date::date,
-        :time::time,
-        :timestamp::timestamptz,
-        :uuid::uuid,
-        :numeric::numeric(10,2),
-        :interval::interval
+        $1::date,
+        $2::time,
+        $3::timestamptz,
+        $4::uuid,
+        $5::numeric(10,2),
+        $6::interval
       """
 
+      # UUIDをバイナリに変換
+      {:ok, uuid_binary} = Ecto.UUID.dump("550e8400-e29b-41d4-a716-446655440000")
+      
       {:ok, %Postgrex.Result{rows: [row]}} =
         Postgrex.query(conn, sql, [
-          "2024-01-01",
-          "12:30:45",
-          "2024-01-01 12:30:45+00",
-          "550e8400-e29b-41d4-a716-446655440000",
+          ~D[2024-01-01],
+          ~T[12:30:45],
+          ~U[2024-01-01 12:30:45Z],
+          uuid_binary,
           Decimal.new("123.45"),
-          "1 day"
+          %Postgrex.Interval{months: 0, days: 1, secs: 0, microsecs: 0}
         ])
 
       assert row != nil
