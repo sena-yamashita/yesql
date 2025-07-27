@@ -19,7 +19,7 @@ defmodule YesqlMSSQLTest do
         {:ok, ctx} ->
           # テーブル作成
           setup_database(ctx.mssql)
-          {:ok, conn: ctx.mssql}
+          {:ok, mssql: ctx.mssql}
 
         _ ->
           IO.puts("MSSQLテストをスキップします - 接続失敗")

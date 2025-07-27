@@ -19,7 +19,7 @@ defmodule YesqlMySQLTest do
         {:ok, ctx} ->
           # テーブル作成
           setup_database(ctx.mysql)
-          {:ok, conn: ctx.mysql}
+          {:ok, mysql: ctx.mysql}
 
         _ ->
           IO.puts("MySQLテストをスキップします - 接続失敗")

@@ -7,10 +7,4 @@ SELECT
 FROM cast_test
 WHERE text_col = CAST(:text_value AS CHAR)
   AND int_col > CAST(:int_value AS SIGNED)
-  AND date_col = CAST(:date_value AS DATE);
-
--- MySQL CONVERT関数のテスト
-SELECT 
-  CONVERT(:text_value, SIGNED INTEGER) as converted_int,
-  CONVERT(:int_value, CHAR) as converted_char,
-  CONVERT(:date_value USING utf8mb4) as converted_charset;
+  AND date_col = CAST(:date_value AS DATE)
