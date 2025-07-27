@@ -125,8 +125,10 @@ defmodule DriverCastSyntaxTest do
       # 注意: DuckDBはパラメータをサポートしないため、直接値を埋め込む
       sql = "SELECT '123'::INTEGER as int_val, 'test'::VARCHAR as text_val"
 
-      {:ok, result} = Duckdbex.query(conn, sql, [])
-      assert [[123, "test"]] = result
+      {:ok, result_ref} = Duckdbex.query(conn, sql, [])
+      # DuckDBは結果リファレンスを返すので、fetch_allで実際のデータを取得
+      rows = Duckdbex.fetch_all(result_ref)
+      assert [[123, "test"]] = rows
     end
   end
 

@@ -96,46 +96,26 @@ defmodule Yesql.Driver.DuckDB do
 
       # プリペアドステートメントを試行
       defp try_prepared_statement(conn, sql, params) do
-        with {:ok, stmt} <- Duckdbex.prepare_statement(conn, sql),
-             {:ok, result_ref} <- Duckdbex.execute_statement(conn, stmt, params) do
-          fetch_and_format_results(result_ref)
-        else
-          error ->
-            # prepare_statement/execute_statementが失敗したら、通常のqueryを試行
-            case Duckdbex.query(conn, sql, params) do
-              {:ok, result_ref} ->
-                fetch_and_format_results(result_ref)
-              error ->
-                error
-            end
-        end
-      rescue
-        e ->
-          # 関数が存在しない場合など
-          {:error, Exception.message(e)}
-      end
-
-      # パラメータ付きクエリを実行
-      defp execute_parameterized(conn, sql, params) do
-        # prepare_statementとexecute_statementを使用
-        with {:ok, stmt} <- Duckdbex.prepare_statement(conn, sql),
-             {:ok, result_ref} <- Duckdbex.execute_statement(conn, stmt, params) do
-          fetch_and_format_results(result_ref)
-        else
-          {:error, error} ->
-            {:error, error}
+        # prepare_statementは現在のDuckdbexではサポートされていない可能性が高いので、
+        # 直接queryにフォールバック
+        case Duckdbex.query(conn, sql, params) do
+          {:ok, result_ref} ->
+            fetch_and_format_results(result_ref)
           error ->
             error
         end
-      rescue
-        e ->
-          # prepare_statement/execute_statementが利用できない場合のフォールバック
-          case Duckdbex.query(conn, sql, params) do
-            {:ok, result_ref} ->
-              fetch_and_format_results(result_ref)
-            error ->
-              error
-          end
+      end
+
+
+      # パラメータ付きクエリを実行
+      defp execute_parameterized(conn, sql, params) do
+        # 現時点では直接queryを使用
+        case Duckdbex.query(conn, sql, params) do
+          {:ok, result_ref} ->
+            fetch_and_format_results(result_ref)
+          error ->
+            error
+        end
       end
 
       # 文字列置換を使用してクエリを実行
@@ -270,6 +250,9 @@ defmodule Yesql.Driver.DuckDB do
       end
 
       def process_result(_driver, {:ok, result}) do
+        # デバッグ出力（後で削除）
+        # IO.inspect(result, label: "DuckDB Result")
+        
         case result do
           %{columns: columns, rows: rows} when is_list(rows) ->
             # 行がキーワードリストの場合の処理
@@ -309,6 +292,10 @@ defmodule Yesql.Driver.DuckDB do
                 end
               end
             end
+
+          # INSERT文などで結果がない場合
+          %{columns: [], rows: []} ->
+            {:ok, []}
 
           _ ->
             {:error, :invalid_result_format}
