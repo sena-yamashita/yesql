@@ -71,12 +71,30 @@ echo -e "\n${YELLOW}Installing dependencies...${NC}"
 mix deps.get
 
 # Ectoを使ったデータベースセットアップ
-echo -e "\n${YELLOW}Setting up databases with Ecto...${NC}"
-export SETUP_DB_WITH_ECTO=true
+echo -e "\n${YELLOW}Setting up databases with standard ecto commands...${NC}"
 export FULL_TEST=true
 
-# test_helper.exsを実行してデータベースを初期化
-mix run test/test_helper.exs
+# PostgreSQL
+echo -e "\n${YELLOW}Setting up PostgreSQL...${NC}"
+MIX_ENV=test mix ecto.drop --repo Yesql.TestRepo.Postgres --force || true
+MIX_ENV=test mix ecto.create --repo Yesql.TestRepo.Postgres
+MIX_ENV=test mix ecto.migrate --repo Yesql.TestRepo.Postgres
+
+# MySQL
+echo -e "\n${YELLOW}Setting up MySQL...${NC}"
+MIX_ENV=test mix ecto.drop --repo Yesql.TestRepo.MySQL --force || true
+MIX_ENV=test mix ecto.create --repo Yesql.TestRepo.MySQL
+MIX_ENV=test mix ecto.migrate --repo Yesql.TestRepo.MySQL
+
+# MSSQL
+echo -e "\n${YELLOW}Setting up MSSQL...${NC}"
+MIX_ENV=test mix ecto.drop --repo Yesql.TestRepo.MSSQL --force || true
+MIX_ENV=test mix ecto.create --repo Yesql.TestRepo.MSSQL
+MIX_ENV=test mix ecto.migrate --repo Yesql.TestRepo.MSSQL
+
+# シードデータを投入
+echo -e "\n${YELLOW}Seeding test data...${NC}"
+MIX_ENV=test mix run priv/repo/seeds.exs
 
 # テストの実行
 case "$TEST_TYPE" in

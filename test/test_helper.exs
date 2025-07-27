@@ -31,12 +31,7 @@ end
 # CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
 if System.get_env("CI") || System.get_env("FULL_TEST") do
   # Docker環境でのテスト時にデータベースをセットアップ
-  if System.get_env("SETUP_DB_WITH_ECTO") == "true" do
-    IO.puts("\n🔧 Ectoを使用してデータベースをセットアップ\n")
-    Yesql.EctoTestHelper.ensure_database_exists("postgres")
-    Yesql.EctoTestHelper.ensure_database_exists("mysql")
-    Yesql.EctoTestHelper.ensure_database_exists("mssql")
-  end
+  # 通常はmix yesql.test.setupを使用するので、ここでは何もしない
   ExUnit.start()
 else
   # ローカル環境では単体テストのみ実行

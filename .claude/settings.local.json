@@ -90,7 +90,16 @@
       "Bash(export POSTGRES_HOST=localhost)",
       "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs --include integration)",
       "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:132)",
-      "Bash(SETUP_DB_WITH_ECTO=true FULL_TEST=true POSTGRES_HOST=localhost mix test test/test_helper.exs)"
+      "Bash(SETUP_DB_WITH_ECTO=true FULL_TEST=true POSTGRES_HOST=localhost mix test test/test_helper.exs)",
+      "Bash(MIX_ENV=test mix yesql.test.setup postgres)",
+      "Bash(MIX_ENV=test mix compile)",
+      "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix yesql.test.setup postgres)",
+      "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix yesql.test.reset postgres)",
+      "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix do ecto.drop --repo Yesql.TestRepo.Postgres, ecto.create --repo Yesql.TestRepo.Postgres, ecto.migrate --repo Yesql.TestRepo.Postgres)",
+      "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix ecto.reset.yesql postgres)",
+      "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix ecto.drop --repo Yesql.TestRepo.Postgres --force)",
+      "Bash(POSTGRES_HOST=localhost FULL_TEST=true mix test test/postgresql_test.exs --only test:\"JSONB型のサポート\")",
+      "Bash(POSTGRES_HOST=localhost FULL_TEST=true mix test test/postgresql_test.exs:19)"
     ],
     "deny": []
   }
