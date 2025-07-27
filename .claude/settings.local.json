@@ -103,7 +103,8 @@
       "Bash(MYSQL_TEST=true make test-mysql)",
       "Bash(MIX_ENV=test mix test test/driver_cast_syntax_test.exs:81 --include postgres)",
       "Bash(MIX_ENV=test mix test test/batch_test.exs:217)",
-      "Bash(MIX_ENV=test mix test test/batch_test.exs:64 test/batch_test.exs:90 test/batch_test.exs:115 test/batch_test.exs:217)"
+      "Bash(MIX_ENV=test mix test test/batch_test.exs:64 test/batch_test.exs:90 test/batch_test.exs:115 test/batch_test.exs:217)",
+      "Bash(MIX_ENV=test mix test test/batch_test.exs:185 --trace)"
     ],
     "deny": []
   }

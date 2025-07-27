@@ -161,11 +161,13 @@ defmodule BatchTest do
     end
 
     test "名前付きクエリのエラー処理", %{conn: conn, driver: driver} do
+      # 順序を保証するために、明示的に順序付けされたクエリを使用
+      # (MapのキーはElixirで自動的にソートされるため、アルファベット順になる)
       named_queries = %{
-        valid: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Valid", 100]},
-        invalid:
+        a_valid: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Valid", 100]},
+        b_invalid:
           {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Invalid", "not_a_number"]},
-        never_executed: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Never", 300]}
+        c_never_executed: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Never", 300]}
       }
 
       {:error, _reason, partial_results} =
@@ -174,10 +176,10 @@ defmodule BatchTest do
           conn: conn
         )
 
-      # 最初のクエリのみ結果に含まれる
-      assert Map.has_key?(partial_results, :valid)
-      refute Map.has_key?(partial_results, :invalid)
-      refute Map.has_key?(partial_results, :never_executed)
+      # 最初のクエリ(a_valid)のみ結果に含まれる
+      assert Map.has_key?(partial_results, :a_valid)
+      refute Map.has_key?(partial_results, :b_invalid)
+      refute Map.has_key?(partial_results, :c_never_executed)
     end
   end
 
@@ -209,8 +211,8 @@ defmodule BatchTest do
 
       assert length(results) == 3
 
-      # 最後のクエリの結果を確認
-      [count_result | _] = results
+      # 最後のクエリの結果を確認（結果は実行順）
+      count_result = List.last(results)
       assert count_result == [%{count: 2}]
     end
 

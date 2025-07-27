@@ -260,7 +260,9 @@ defmodule DriverCastSyntaxTest do
     :ok
   end
 
-  defp create_duckdb_cast_table(%{duckdb: conn}) do
+  defp create_duckdb_cast_table(ctx) when is_list(ctx) do
+    conn = ctx[:duckdb]
+    
     Duckdbex.query(
       conn,
       """
