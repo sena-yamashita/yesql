@@ -328,99 +328,111 @@ defmodule PostgreSQLStreamingTest do
 
   # ヘルパー関数
 
-  defp create_streaming_test_table(%{postgrex: conn}) do
-    {:ok, _} =
-      Postgrex.query(
-        conn,
-        """
-          CREATE TABLE IF NOT EXISTS stream_test (
-            id SERIAL PRIMARY KEY,
-            value INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        """,
-        []
-      )
+  defp create_streaming_test_table(ctx) do
+    conn = ctx[:postgrex]
+    
+    unless conn do
+      :ok
+    else
+      {:ok, _} =
+        Postgrex.query(
+          conn,
+          """
+            CREATE TABLE IF NOT EXISTS stream_test (
+              id SERIAL PRIMARY KEY,
+              value INTEGER NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          """,
+          []
+        )
 
-    # データが存在しない場合のみ挿入
-    {:ok, result} = Postgrex.query(conn, "SELECT COUNT(*) FROM stream_test", [])
+      # データが存在しない場合のみ挿入
+      {:ok, result} = Postgrex.query(conn, "SELECT COUNT(*) FROM stream_test", [])
 
-    if result.rows == [[0]] do
-      # バッチ挿入で10,000件のデータを作成
-      Enum.chunk_every(100..10000, 1000)
-      |> Enum.each(fn chunk ->
-        values =
-          chunk
-          |> Enum.map(fn i -> "(#{i})" end)
-          |> Enum.join(",")
+      if result.rows == [[0]] do
+        # バッチ挿入で10,000件のデータを作成
+        Enum.chunk_every(100..10000, 1000)
+        |> Enum.each(fn chunk ->
+          values =
+            chunk
+            |> Enum.map(fn i -> "(#{i})" end)
+            |> Enum.join(",")
 
-        {:ok, _} =
-          Postgrex.query(
-            conn,
-            """
-              INSERT INTO stream_test (value) VALUES #{values}
-            """,
-            []
-          )
-      end)
+          {:ok, _} =
+            Postgrex.query(
+              conn,
+              """
+                INSERT INTO stream_test (value) VALUES #{values}
+              """,
+              []
+            )
+        end)
+      end
+
+      :ok
     end
-
-    :ok
   end
 
-  defp create_large_streaming_table(%{postgrex: conn}) do
-    {:ok, _} =
-      Postgrex.query(
-        conn,
-        """
-          CREATE TABLE IF NOT EXISTS large_stream_test (
-            id SERIAL PRIMARY KEY,
-            category VARCHAR(10),
-            value INTEGER,
-            data TEXT
-          )
-        """,
-        []
-      )
+  defp create_large_streaming_table(ctx) do
+    conn = ctx[:postgrex]
+    
+    unless conn do
+      :ok
+    else
+      {:ok, _} =
+        Postgrex.query(
+          conn,
+          """
+            CREATE TABLE IF NOT EXISTS large_stream_test (
+              id SERIAL PRIMARY KEY,
+              category VARCHAR(10),
+              value INTEGER,
+              data TEXT
+            )
+          """,
+          []
+        )
 
-    # データが存在しない場合のみ挿入
-    {:ok, result} = Postgrex.query(conn, "SELECT COUNT(*) FROM large_stream_test", [])
+      # データが存在しない場合のみ挿入
+      {:ok, result} = Postgrex.query(conn, "SELECT COUNT(*) FROM large_stream_test", [])
 
-    if result.rows == [[0]] do
-      IO.puts("Creating 1M test records... This may take a while.")
+      if result.rows == [[0]] do
+        IO.puts("Creating 1M test records... This may take a while.")
 
-      # 100万件のデータを10,000件ずつバッチ挿入
-      Enum.chunk_every(1..1_000_000, 10_000)
-      |> Enum.with_index(1)
-      |> Enum.each(fn {chunk, batch_num} ->
-        if rem(batch_num, 10) == 0 do
-          IO.puts("Progress: #{batch_num * 10_000} records inserted")
-        end
+        # 100万件のデータを10,000件ずつバッチ挿入
+        Enum.chunk_every(1..1_000_000, 10_000)
+        |> Enum.with_index(1)
+        |> Enum.each(fn {chunk, batch_num} ->
+          if rem(batch_num, 10) == 0 do
+            IO.puts("Progress: #{batch_num * 10_000} records inserted")
+          end
 
-        values =
-          chunk
-          |> Enum.map(fn i ->
-            category = "CAT#{rem(i, 10)}"
-            value = rem(i, 1000)
-            "('#{category}', #{value}, 'Data for record #{i}')"
-          end)
-          |> Enum.join(",")
+          values =
+            chunk
+            |> Enum.map(fn i ->
+              category = "CAT#{rem(i, 10)}"
+              value = rem(i, 1000)
+              "('#{category}', #{value}, 'Data for record #{i}')"
+            end)
+            |> Enum.join(",")
 
-        {:ok, _} =
-          Postgrex.query(
-            conn,
-            """
-              INSERT INTO large_stream_test (category, value, data) 
-              VALUES #{values}
-            """,
-            []
-          )
-      end)
+          {:ok, _} =
+            Postgrex.query(
+              conn,
+              """
+                INSERT INTO large_stream_test (category, value, data) 
+                VALUES #{values}
+              """,
+              []
+            )
+        end)
 
-      IO.puts("Created 1M test records")
+        IO.puts("Created 1M test records")
+      end
+
+      :ok
     end
-
-    :ok
   end
 
   defp fetch_all_from_cursor(conn, cursor_name, chunk_size) do

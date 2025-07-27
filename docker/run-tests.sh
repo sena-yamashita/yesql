@@ -89,48 +89,48 @@ case "$TEST_TYPE" in
     
     # PostgreSQL and core tests
     echo -e "\n${YELLOW}Running PostgreSQL and core tests...${NC}"
-    mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
+    POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
     
     # MySQL tests
     echo -e "\n${YELLOW}Running MySQL tests...${NC}"
-    MYSQL_TEST=true mix test --only mysql
+    MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
     
     # SQLite tests
     echo -e "\n${YELLOW}Running SQLite tests...${NC}"
-    SQLITE_TEST=true mix test --only sqlite
+    SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
     
     # MSSQL tests
     echo -e "\n${YELLOW}Running MSSQL tests...${NC}"
-    MSSQL_TEST=true mix test --only mssql
+    MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
     
     # DuckDB tests
     echo -e "\n${YELLOW}Running DuckDB tests...${NC}"
-    DUCKDB_TEST=true mix test --only duckdb
+    DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
     ;;
     
   "postgres")
     echo -e "\n${GREEN}Running PostgreSQL tests only...${NC}"
-    mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
+    POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
     ;;
     
   "mysql")
     echo -e "\n${GREEN}Running MySQL tests only...${NC}"
-    MYSQL_TEST=true mix test --only mysql
+    MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
     ;;
     
   "sqlite")
     echo -e "\n${GREEN}Running SQLite tests only...${NC}"
-    SQLITE_TEST=true mix test --only sqlite
+    SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
     ;;
     
   "mssql")
     echo -e "\n${GREEN}Running MSSQL tests only...${NC}"
-    MSSQL_TEST=true mix test --only mssql
+    MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
     ;;
     
   "duckdb")
     echo -e "\n${GREEN}Running DuckDB tests only...${NC}"
-    DUCKDB_TEST=true mix test --only duckdb
+    DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
     ;;
     
   *)

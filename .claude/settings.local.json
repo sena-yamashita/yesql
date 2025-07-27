@@ -99,7 +99,8 @@
       "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix ecto.reset.yesql postgres)",
       "Bash(POSTGRES_HOST=localhost MIX_ENV=test mix ecto.drop --repo Yesql.TestRepo.Postgres --force)",
       "Bash(POSTGRES_HOST=localhost FULL_TEST=true mix test test/postgresql_test.exs --only test:\"JSONB型のサポート\")",
-      "Bash(POSTGRES_HOST=localhost FULL_TEST=true mix test test/postgresql_test.exs:19)"
+      "Bash(POSTGRES_HOST=localhost FULL_TEST=true mix test test/postgresql_test.exs:19)",
+      "Bash(MYSQL_TEST=true make test-mysql)"
     ],
     "deny": []
   }

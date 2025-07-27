@@ -12,10 +12,11 @@ defmodule BatchTest do
       "postgrex" ->
         {:ok, conn} =
           Postgrex.start_link(
-            hostname: "localhost",
-            username: "postgres",
-            password: "postgres",
-            database: "yesql_test"
+            hostname: System.get_env("POSTGRES_HOST", "localhost"),
+            username: System.get_env("POSTGRES_USER", "postgres"),
+            password: System.get_env("POSTGRES_PASSWORD", "postgres"),
+            database: System.get_env("POSTGRES_DATABASE", "yesql_test"),
+            port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
           )
 
         # テーブル作成
