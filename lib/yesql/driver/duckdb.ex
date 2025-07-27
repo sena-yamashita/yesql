@@ -72,11 +72,12 @@ defmodule Yesql.Driver.DuckDB do
 
       # 適切な実行方法を検出して実行
       defp detect_and_execute(conn, sql, params, cache_key) do
-        case Duckdbex.query(conn, sql, params) do
-          {:ok, result_ref} ->
-            # パラメータ付きクエリが成功
+        # まずprepare_statement/execute_statementを試行
+        case try_prepared_statement(conn, sql, params) do
+          {:ok, result} ->
+            # プリペアドステートメントが成功
             :ets.insert(@cache_table, {cache_key, :parameterized})
-            fetch_and_format_results(result_ref)
+            {:ok, result}
 
           {:error, error} ->
             # エラーチェックはガード外で行う
@@ -93,15 +94,48 @@ defmodule Yesql.Driver.DuckDB do
         end
       end
 
+      # プリペアドステートメントを試行
+      defp try_prepared_statement(conn, sql, params) do
+        with {:ok, stmt} <- Duckdbex.prepare_statement(conn, sql),
+             {:ok, result_ref} <- Duckdbex.execute_statement(conn, stmt, params) do
+          fetch_and_format_results(result_ref)
+        else
+          error ->
+            # prepare_statement/execute_statementが失敗したら、通常のqueryを試行
+            case Duckdbex.query(conn, sql, params) do
+              {:ok, result_ref} ->
+                fetch_and_format_results(result_ref)
+              error ->
+                error
+            end
+        end
+      rescue
+        e ->
+          # 関数が存在しない場合など
+          {:error, Exception.message(e)}
+      end
+
       # パラメータ付きクエリを実行
       defp execute_parameterized(conn, sql, params) do
-        case Duckdbex.query(conn, sql, params) do
-          {:ok, result_ref} ->
-            fetch_and_format_results(result_ref)
-
+        # prepare_statementとexecute_statementを使用
+        with {:ok, stmt} <- Duckdbex.prepare_statement(conn, sql),
+             {:ok, result_ref} <- Duckdbex.execute_statement(conn, stmt, params) do
+          fetch_and_format_results(result_ref)
+        else
+          {:error, error} ->
+            {:error, error}
           error ->
             error
         end
+      rescue
+        e ->
+          # prepare_statement/execute_statementが利用できない場合のフォールバック
+          case Duckdbex.query(conn, sql, params) do
+            {:ok, result_ref} ->
+              fetch_and_format_results(result_ref)
+            error ->
+              error
+          end
       end
 
       # 文字列置換を使用してクエリを実行
