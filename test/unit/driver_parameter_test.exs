@@ -8,9 +8,11 @@ defmodule Yesql.Unit.DriverParameterTest do
     case System.get_env("YESQL_TOKENIZER") do
       "nimble" ->
         Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
+
       _ ->
         Yesql.Config.put_tokenizer(Yesql.Tokenizer.Default)
     end
+
     :ok
   end
 
@@ -334,7 +336,7 @@ defmodule Yesql.Unit.DriverParameterTest do
 
       # トークナイザによって動作が異なる
       current_tokenizer = Yesql.Config.get_tokenizer()
-      
+
       if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
         # NimbleParsecはコメント行を完全に削除し、パラメータを無視する（正しい動作）
         assert converted == "SELECT * FROM users WHERE id = $1"
@@ -348,11 +350,15 @@ defmodule Yesql.Unit.DriverParameterTest do
 
     @tag :tokenizer_dependent
     test "複雑なキャスト構文", %{driver: driver} do
-      sql = "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = :name AND data @> :filter"
+      sql =
+        "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = :name AND data @> :filter"
+
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
       # 両方のトークナイザーで正しく動作することを確認
-      assert converted == "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = $1 AND data @> $2"
+      assert converted ==
+               "SELECT (data->'items')::jsonb, array_agg(id)::int[] FROM table WHERE name::varchar = $1 AND data @> $2"
+
       assert params == [:name, :filter]
     end
 
@@ -390,7 +396,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
       current_tokenizer = Yesql.Config.get_tokenizer()
-      
+
       if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
         # NimbleParsecは複数行コメントを完全に削除し、パラメータを無視
         assert converted == "SELECT * FROM users  WHERE id = $1"
@@ -408,7 +414,7 @@ defmodule Yesql.Unit.DriverParameterTest do
       {converted, params} = Yesql.Driver.convert_params(driver, sql, [])
 
       current_tokenizer = Yesql.Config.get_tokenizer()
-      
+
       if current_tokenizer == Yesql.Tokenizer.NimbleParsecImpl do
         # NimbleParsecはMySQLコメント行を完全に削除し、パラメータも無視
         assert converted == "SELECT * FROM users WHERE id = $1"

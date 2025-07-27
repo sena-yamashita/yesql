@@ -53,7 +53,7 @@ defmodule StreamTest do
 
       # データを全て取得
       results = stream |> Enum.to_list()
-      
+
       assert length(results) == 100
     end
   end
@@ -163,12 +163,13 @@ defmodule StreamTest do
     end
 
     test "存在しないテーブル", %{postgrex: conn} do
-      result = Stream.query(
-        conn, 
-        "SELECT * FROM non_existent_table", 
-        [], 
-        driver: :postgrex
-      )
+      result =
+        Stream.query(
+          conn,
+          "SELECT * FROM non_existent_table",
+          [],
+          driver: :postgrex
+        )
 
       assert {:error, _} = result
     end
@@ -180,17 +181,18 @@ defmodule StreamTest do
     # テーブルを作成
     {:ok, _} = Postgrex.query(conn, "DROP TABLE IF EXISTS stream_test", [])
 
-    {:ok, _} = Postgrex.query(
-      conn,
-      """
-      CREATE TABLE stream_test (
-        id SERIAL PRIMARY KEY,
-        value INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    {:ok, _} =
+      Postgrex.query(
+        conn,
+        """
+        CREATE TABLE stream_test (
+          id SERIAL PRIMARY KEY,
+          value INTEGER NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        []
       )
-      """,
-      []
-    )
 
     # バッチ挿入で10,000件のデータを作成
     Enum.chunk_every(100..10099, 1000)
@@ -200,11 +202,12 @@ defmodule StreamTest do
         |> Enum.map(fn i -> "(#{i})" end)
         |> Enum.join(",")
 
-      {:ok, _} = Postgrex.query(
-        conn,
-        "INSERT INTO stream_test (value) VALUES #{values}",
-        []
-      )
+      {:ok, _} =
+        Postgrex.query(
+          conn,
+          "INSERT INTO stream_test (value) VALUES #{values}",
+          []
+        )
     end)
   end
 end

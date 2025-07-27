@@ -68,37 +68,37 @@ defmodule Yesql.TestMigration do
 
   def up do
     create table(:users) do
-      add :name, :string, null: false
-      add :age, :integer, null: false
-      add :email, :string
+      add(:name, :string, null: false)
+      add(:age, :integer, null: false)
+      add(:email, :string)
       timestamps()
     end
 
     create table(:cats) do
-      add :name, :string
-      add :age, :integer, null: false
+      add(:name, :string)
+      add(:age, :integer, null: false)
     end
 
     create table(:products) do
-      add :name, :string, null: false
-      add :price, :decimal, precision: 10, scale: 2
-      add :category, :string
-      add :in_stock, :boolean, default: true
+      add(:name, :string, null: false)
+      add(:price, :decimal, precision: 10, scale: 2)
+      add(:category, :string)
+      add(:in_stock, :boolean, default: true)
       timestamps()
     end
 
     # ストリーミングテスト用の大量データテーブル
     create table(:large_data) do
-      add :value, :integer
-      add :data, :text
+      add(:value, :integer)
+      add(:data, :text)
       timestamps()
     end
   end
 
   def down do
-    drop table(:large_data)
-    drop table(:products)
-    drop table(:cats)
-    drop table(:users)
+    drop(table(:large_data))
+    drop(table(:products))
+    drop(table(:cats))
+    drop(table(:users))
   end
 end

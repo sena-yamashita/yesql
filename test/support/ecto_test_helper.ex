@@ -1,7 +1,7 @@
 defmodule Yesql.EctoTestHelper do
   @moduledoc """
   Ectoを使用したテストヘルパー
-  
+
   既存のテストを大きく変更せずに、
   データベースセットアップのみEctoで統一する
   """
@@ -10,10 +10,13 @@ defmodule Yesql.EctoTestHelper do
     case db_type do
       "postgres" ->
         ensure_postgres_database()
+
       "mysql" ->
         ensure_mysql_database()
+
       "mssql" ->
         ensure_mssql_database()
+
       _ ->
         {:error, :unsupported_database}
     end
@@ -33,15 +36,19 @@ defmodule Yesql.EctoTestHelper do
       {:ok, conn} ->
         # yesql_testデータベースを作成（存在しない場合）
         case Postgrex.query(conn, "CREATE DATABASE yesql_test", []) do
-          {:ok, _} -> 
+          {:ok, _} ->
             IO.puts("Created PostgreSQL database: yesql_test")
+
           {:error, %{postgres: %{code: :duplicate_database}}} ->
             IO.puts("PostgreSQL database already exists: yesql_test")
+
           error ->
             IO.puts("PostgreSQL database creation error: #{inspect(error)}")
         end
+
         GenServer.stop(conn)
         :ok
+
       {:error, reason} ->
         IO.puts("Failed to connect to PostgreSQL: #{inspect(reason)}")
         {:error, reason}
@@ -62,6 +69,7 @@ defmodule Yesql.EctoTestHelper do
         IO.puts("Ensured MySQL database exists: yesql_test")
         GenServer.stop(conn)
         :ok
+
       {:error, reason} ->
         IO.puts("Failed to connect to MySQL: #{inspect(reason)}")
         {:error, reason}
@@ -79,13 +87,20 @@ defmodule Yesql.EctoTestHelper do
 
     case Tds.start_link(opts) do
       {:ok, conn} ->
-        {:ok, _} = Tds.query(conn, """
-          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
-          CREATE DATABASE yesql_test
-        """, [])
+        {:ok, _} =
+          Tds.query(
+            conn,
+            """
+              IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
+              CREATE DATABASE yesql_test
+            """,
+            []
+          )
+
         IO.puts("Ensured MSSQL database exists: yesql_test")
         GenServer.stop(conn)
         :ok
+
       {:error, reason} ->
         IO.puts("Failed to connect to MSSQL: #{inspect(reason)}")
         {:error, reason}
@@ -110,71 +125,97 @@ defmodule Yesql.EctoTestHelper do
   defp create_postgres_tables(conn) do
     # cats テーブル（既存のテストが期待する構造）
     Postgrex.query!(conn, "DROP TABLE IF EXISTS cats CASCADE", [])
-    Postgrex.query!(conn, """
-      CREATE TABLE cats (
-        age  INTEGER NOT NULL,
-        name VARCHAR
-      )
-    """, [])
+
+    Postgrex.query!(
+      conn,
+      """
+        CREATE TABLE cats (
+          age  INTEGER NOT NULL,
+          name VARCHAR
+        )
+      """,
+      []
+    )
 
     # users テーブル
     Postgrex.query!(conn, "DROP TABLE IF EXISTS users CASCADE", [])
-    Postgrex.query!(conn, """
-      CREATE TABLE users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        age INTEGER NOT NULL,
-        email VARCHAR(255)
-      )
-    """, [])
+
+    Postgrex.query!(
+      conn,
+      """
+        CREATE TABLE users (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          age INTEGER NOT NULL,
+          email VARCHAR(255)
+        )
+      """,
+      []
+    )
 
     :ok
   end
 
   defp create_mysql_tables(conn) do
     MyXQL.query!(conn, "DROP TABLE IF EXISTS users", [])
-    MyXQL.query!(conn, """
-      CREATE TABLE users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        age INT NOT NULL,
-        email VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    """, [])
+
+    MyXQL.query!(
+      conn,
+      """
+        CREATE TABLE users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          age INT NOT NULL,
+          email VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      """,
+      []
+    )
 
     :ok
   end
 
   defp create_mssql_tables(conn) do
     Tds.query!(conn, "IF OBJECT_ID('users', 'U') IS NOT NULL DROP TABLE users", [])
-    Tds.query!(conn, """
-      CREATE TABLE users (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        name NVARCHAR(255) NOT NULL,
-        age INT NOT NULL,
-        email NVARCHAR(255),
-        created_at DATETIME DEFAULT GETDATE()
-      )
-    """, [])
+
+    Tds.query!(
+      conn,
+      """
+        CREATE TABLE users (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          name NVARCHAR(255) NOT NULL,
+          age INT NOT NULL,
+          email NVARCHAR(255),
+          created_at DATETIME DEFAULT GETDATE()
+        )
+      """,
+      []
+    )
 
     :ok
   end
 
   defp create_duckdb_tables(conn) do
     Duckdbex.query(conn, "DROP TABLE IF EXISTS ducks", [])
-    Duckdbex.query(conn, """
-      CREATE TABLE ducks (
-        age  INTEGER NOT NULL,
-        name VARCHAR
-      )
-    """, [])
+
+    Duckdbex.query(
+      conn,
+      """
+        CREATE TABLE ducks (
+          age  INTEGER NOT NULL,
+          name VARCHAR
+        )
+      """,
+      []
+    )
 
     :ok
   end
 
   defp create_sqlite_tables(conn) do
     Exqlite.Sqlite3.execute(conn, "DROP TABLE IF EXISTS users")
+
     Exqlite.Sqlite3.execute(conn, """
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -21,85 +21,88 @@ if Code.ensure_loaded?(Postgrex) do
       chunk_size = Keyword.get(opts, :chunk_size, max_rows)
 
       # カーソルベースのストリーミングを実装
-      stream = Stream.resource(
-        # 初期化
-        fn -> 
-          # 一意のカーソル名を生成
-          cursor_name = "yesql_cursor_#{:erlang.unique_integer([:positive])}"
-          {:start, conn, cursor_name, sql, params, chunk_size}
-        end,
-        
-        # 次の要素を取得
-        fn
-          {:start, conn, cursor_name, sql, params, chunk_size} ->
-            # トランザクションを開始してカーソルを宣言
-            case Postgrex.transaction(conn, fn tx_conn ->
-              declare_sql = "DECLARE #{cursor_name} CURSOR FOR #{sql}"
-              
-              case Postgrex.query(tx_conn, declare_sql, params) do
-                {:ok, _} ->
-                  # 最初のフェッチ
-                  fetch_rows(tx_conn, cursor_name, chunk_size)
-                  
-                {:error, _} = error ->
-                  error
+      stream =
+        Stream.resource(
+          # 初期化
+          fn ->
+            # 一意のカーソル名を生成
+            cursor_name = "yesql_cursor_#{:erlang.unique_integer([:positive])}"
+            {:start, conn, cursor_name, sql, params, chunk_size}
+          end,
+
+          # 次の要素を取得
+          fn
+            {:start, conn, cursor_name, sql, params, chunk_size} ->
+              # トランザクションを開始してカーソルを宣言
+              case Postgrex.transaction(conn, fn tx_conn ->
+                     declare_sql = "DECLARE #{cursor_name} CURSOR FOR #{sql}"
+
+                     case Postgrex.query(tx_conn, declare_sql, params) do
+                       {:ok, _} ->
+                         # 最初のフェッチ
+                         fetch_rows(tx_conn, cursor_name, chunk_size)
+
+                       {:error, _} = error ->
+                         error
+                     end
+                   end) do
+                {:ok, {:ok, rows}} ->
+                  {rows, {:fetching, conn, cursor_name, chunk_size}}
+
+                {:ok, {:error, _}} ->
+                  {:halt, :error}
+
+                {:error, _} ->
+                  {:halt, :error}
               end
-            end) do
-              {:ok, {:ok, rows}} ->
-                {rows, {:fetching, conn, cursor_name, chunk_size}}
-                
-              {:ok, {:error, _}} ->
-                {:halt, :error}
-                
-              {:error, _} ->
-                {:halt, :error}
-            end
-            
-          {:fetching, conn, cursor_name, chunk_size} ->
-            # 続きのデータをフェッチ
-            case Postgrex.transaction(conn, fn tx_conn ->
-              fetch_rows(tx_conn, cursor_name, chunk_size)
-            end) do
-              {:ok, {:ok, []}} ->
-                # データの終わり
-                {:halt, {:done, conn, cursor_name}}
-                
-              {:ok, {:ok, rows}} ->
-                {rows, {:fetching, conn, cursor_name, chunk_size}}
-                
-              _ ->
-                {:halt, {:error, conn, cursor_name}}
-            end
-            
-          _ ->
-            {:halt, :done}
-        end,
-        
-        # クリーンアップ
-        fn 
-          {:done, conn, cursor_name} ->
-            # カーソルをクローズ
-            Postgrex.transaction(conn, fn tx_conn ->
-              Postgrex.query(tx_conn, "CLOSE #{cursor_name}", [])
-            end)
-            :ok
-            
-          {:error, conn, cursor_name} ->
-            # エラー時もカーソルをクローズ
-            try do
+
+            {:fetching, conn, cursor_name, chunk_size} ->
+              # 続きのデータをフェッチ
+              case Postgrex.transaction(conn, fn tx_conn ->
+                     fetch_rows(tx_conn, cursor_name, chunk_size)
+                   end) do
+                {:ok, {:ok, []}} ->
+                  # データの終わり
+                  {:halt, {:done, conn, cursor_name}}
+
+                {:ok, {:ok, rows}} ->
+                  {rows, {:fetching, conn, cursor_name, chunk_size}}
+
+                _ ->
+                  {:halt, {:error, conn, cursor_name}}
+              end
+
+            _ ->
+              {:halt, :done}
+          end,
+
+          # クリーンアップ
+          fn
+            {:done, conn, cursor_name} ->
+              # カーソルをクローズ
               Postgrex.transaction(conn, fn tx_conn ->
                 Postgrex.query(tx_conn, "CLOSE #{cursor_name}", [])
               end)
-            rescue
-              _ -> :ok
-            end
-            :ok
-            
-          _ ->
-            :ok
-        end
-      )
-      
+
+              :ok
+
+            {:error, conn, cursor_name} ->
+              # エラー時もカーソルをクローズ
+              try do
+                Postgrex.transaction(conn, fn tx_conn ->
+                  Postgrex.query(tx_conn, "CLOSE #{cursor_name}", [])
+                end)
+              rescue
+                _ -> :ok
+              end
+
+              :ok
+
+            _ ->
+              :ok
+          end
+        )
+
       {:ok, stream}
     end
 
@@ -110,23 +113,24 @@ if Code.ensure_loaded?(Postgrex) do
     """
     def create_simple(conn, sql, params, opts \\ []) do
       chunk_size = Keyword.get(opts, :chunk_size, 500)
-      
+
       # 単純なクエリ実行（非ストリーミング）
       case Postgrex.query(conn, sql, params) do
         {:ok, %Postgrex.Result{rows: rows, columns: columns}} ->
           atom_columns = Enum.map(columns, &String.to_atom/1)
-          
+
           # ストリームとして返す
-          stream = Stream.map(rows, fn row ->
-            atom_columns
-            |> Enum.zip(row)
-            |> Enum.into(%{})
-          end)
-          |> Stream.chunk_every(chunk_size)
-          |> Stream.flat_map(&Function.identity/1)
-          
+          stream =
+            Stream.map(rows, fn row ->
+              atom_columns
+              |> Enum.zip(row)
+              |> Enum.into(%{})
+            end)
+            |> Stream.chunk_every(chunk_size)
+            |> Stream.flat_map(&Function.identity/1)
+
           {:ok, stream}
-          
+
         {:error, _} = error ->
           error
       end
@@ -232,22 +236,23 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp fetch_rows(conn, cursor_name, chunk_size) do
       fetch_sql = "FETCH #{chunk_size} FROM #{cursor_name}"
-      
+
       case Postgrex.query(conn, fetch_sql, []) do
         {:ok, %Postgrex.Result{rows: [], columns: _}} ->
           {:ok, []}
-          
+
         {:ok, %Postgrex.Result{rows: rows, columns: columns}} ->
           atom_columns = Enum.map(columns, &String.to_atom/1)
-          
-          processed_rows = Enum.map(rows, fn row ->
-            atom_columns
-            |> Enum.zip(row)
-            |> Enum.into(%{})
-          end)
-          
+
+          processed_rows =
+            Enum.map(rows, fn row ->
+              atom_columns
+              |> Enum.zip(row)
+              |> Enum.into(%{})
+            end)
+
           {:ok, processed_rows}
-          
+
         {:error, _} = error ->
           error
       end

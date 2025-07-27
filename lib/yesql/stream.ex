@@ -190,7 +190,12 @@ defmodule Yesql.Stream do
   end
 
   defp create_stream(%Yesql.Driver.Oracle{} = _driver, conn, sql, params, chunk_size, opts) do
-    Yesql.Stream.OracleStream.create(conn, sql, params, Keyword.put(opts, :chunk_size, chunk_size))
+    Yesql.Stream.OracleStream.create(
+      conn,
+      sql,
+      params,
+      Keyword.put(opts, :chunk_size, chunk_size)
+    )
   end
 
   defp create_stream(%Yesql.Driver.Ecto{} = _driver, conn, sql, params, _chunk_size, opts) do

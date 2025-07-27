@@ -91,7 +91,7 @@ defmodule DriverCastSyntaxTest do
 
       # UUIDをバイナリに変換
       {:ok, uuid_binary} = Ecto.UUID.dump("550e8400-e29b-41d4-a716-446655440000")
-      
+
       {:ok, %Postgrex.Result{rows: [row]}} =
         Postgrex.query(conn, sql, [
           ~D[2024-01-01],
@@ -153,7 +153,7 @@ defmodule DriverCastSyntaxTest do
         VALUES ('123', 456, '2024-01-01'), ('456', 789, '2024-01-02')
         """
       )
-      
+
       # MySQLはCAST関数を使用
       {:ok, results} =
         MySQLQuery.mysql_cast(conn,
@@ -181,21 +181,24 @@ defmodule DriverCastSyntaxTest do
     @tag :sqlite
     test "SQLiteのCAST関数", %{sqlite: conn} do
       # 追加のテストデータを挿入
-      {:ok, _} = Exqlite.query(conn, """
-        INSERT INTO cast_test (id, text_col, int_col, real_col)
-        VALUES (2, '456', 789, 456.78)
-      """)
-      
+      {:ok, _} =
+        Exqlite.query(conn, """
+          INSERT INTO cast_test (id, text_col, int_col, real_col)
+          VALUES (2, '456', 789, 456.78)
+        """)
+
       # SQLiteもCAST関数を使用
       {:ok, results} =
         SQLiteQuery.sqlite_cast(conn,
           text_value: "123",
-          int_value: 400,  # 456より小さい値を指定
-          real_value: 100.0  # 123.45より小さい値を指定
+          # 456より小さい値を指定
+          int_value: 400,
+          # 123.45より小さい値を指定
+          real_value: 100.0
         )
 
       assert length(results) >= 1
-      
+
       # 最初の結果を確認
       first = hd(results)
       assert first[:text_to_int] == 123
@@ -226,17 +229,19 @@ defmodule DriverCastSyntaxTest do
         """,
         []
       )
-      
+
       # MSSQLはCASTとCONVERTの両方をサポート
       {:ok, results} =
         MSSQLQuery.mssql_cast(conn,
           text_value: "123",
-          int_value: 400,  # 456より小さい値
-          date_value: ~D[2023-12-31]  # 2024-01-01より前の日付
+          # 456より小さい値
+          int_value: 400,
+          # 2024-01-01より前の日付
+          date_value: ~D[2023-12-31]
         )
 
       assert length(results) >= 1
-      
+
       # 最初の結果を確認
       first = hd(results)
       assert first[:text_to_int] == 123
@@ -296,7 +301,7 @@ defmodule DriverCastSyntaxTest do
 
   defp create_duckdb_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:duckdb]
-    
+
     Duckdbex.query(
       conn,
       """
@@ -333,23 +338,25 @@ defmodule DriverCastSyntaxTest do
   defp create_sqlite_cast_table(ctx) when is_list(ctx) do
     conn = ctx[:sqlite]
 
-    {:ok, _} = Exqlite.query(conn, """
-      CREATE TABLE IF NOT EXISTS cast_test (
-        id INTEGER PRIMARY KEY,
-        text_col TEXT,
-        int_col INTEGER,
-        real_col REAL
-      )
-    """)
+    {:ok, _} =
+      Exqlite.query(conn, """
+        CREATE TABLE IF NOT EXISTS cast_test (
+          id INTEGER PRIMARY KEY,
+          text_col TEXT,
+          int_col INTEGER,
+          real_col REAL
+        )
+      """)
 
     {:ok, _} = Exqlite.query(conn, "DELETE FROM cast_test")
-    
+
     # テストデータを挿入
-    {:ok, _} = Exqlite.query(conn, """
-      INSERT INTO cast_test (id, text_col, int_col, real_col)
-      VALUES (1, '123', 456, 123.45)
-    """)
-    
+    {:ok, _} =
+      Exqlite.query(conn, """
+        INSERT INTO cast_test (id, text_col, int_col, real_col)
+        VALUES (1, '123', 456, 123.45)
+      """)
+
     :ok
   end
 
@@ -371,7 +378,7 @@ defmodule DriverCastSyntaxTest do
     )
 
     Tds.query!(conn, "TRUNCATE TABLE cast_test", [])
-    
+
     # テストデータを挿入
     Tds.query!(
       conn,
@@ -381,7 +388,7 @@ defmodule DriverCastSyntaxTest do
       """,
       []
     )
-    
+
     :ok
   end
 
@@ -394,18 +401,19 @@ defmodule DriverCastSyntaxTest do
       _ -> :ok
     end
 
-    {:ok, _} = Jamdb.Oracle.query(
-      conn,
-      """
-        CREATE TABLE cast_test (
-          id NUMBER PRIMARY KEY,
-          text_col VARCHAR2(255),
-          int_col NUMBER,
-          date_col DATE
-        )
-      """,
-      []
-    )
+    {:ok, _} =
+      Jamdb.Oracle.query(
+        conn,
+        """
+          CREATE TABLE cast_test (
+            id NUMBER PRIMARY KEY,
+            text_col VARCHAR2(255),
+            int_col NUMBER,
+            date_col DATE
+          )
+        """,
+        []
+      )
 
     :ok
   end

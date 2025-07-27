@@ -646,7 +646,7 @@ defmodule PostgreSQLTest do
       "DROP TABLE IF EXISTS test_partial_index CASCADE",
       "DROP TABLE IF EXISTS test_aggregates CASCADE"
     ]
-    
+
     Enum.each(drop_tables, fn drop_sql ->
       Postgrex.query(conn, drop_sql, [])
     end)

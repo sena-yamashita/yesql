@@ -48,7 +48,7 @@ jobs:
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
         POSTGRES_DATABASE: yesql_test
-      run: mix test test/postgrex_test.exs test/postgrex_streaming_test.exs
+      run: mix test test/postgresql_test.exs test/postgresql_streaming_test.exs
 
   mysql:
     name: MySQL Tests
@@ -88,7 +88,7 @@ jobs:
         MYSQL_PASSWORD: root
         MYSQL_DATABASE: yesql_test
         MYSQL_TEST: true
-      run: mix test test/mysql_test.exs test/mysql_streaming_test.exs
+      run: mix test test/mysql_test.exs
 
   sqlite:
     name: SQLite Tests
@@ -109,7 +109,7 @@ jobs:
     - name: Run SQLite tests
       env:
         SQLITE_TEST: true
-      run: mix test test/sqlite_test.exs test/sqlite_streaming_test.exs
+      run: mix test test/sqlite_test.exs
 
   duckdb:
     name: DuckDB Tests
@@ -193,4 +193,4 @@ jobs:
         MSSQL_PASSWORD: YourStrong@Passw0rd
         MSSQL_DATABASE: master
         MSSQL_TEST: true
-      run: mix test test/mssql_test.exs test/mssql_streaming_test.exs
+      run: mix test test/mssql_test.exs

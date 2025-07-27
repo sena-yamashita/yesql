@@ -115,7 +115,7 @@ defmodule Yesql.Mixfile do
       "test.mysql": ["cmd FULL_TEST=true MYSQL_TEST=true mix test --only mysql"],
       "test.mssql": ["cmd FULL_TEST=true MSSQL_TEST=true mix test --only mssql"],
       "test.duckdb": ["cmd DUCKDB_TEST=true mix test --only duckdb"],
-      
+
       # ドライバーテスト管理
       "test.all": ["test.drivers"],
 

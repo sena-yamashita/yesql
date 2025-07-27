@@ -37,7 +37,7 @@ defmodule YesqlMSSQLTest do
     else
       # MSSQLプロセス名を取得
       mssql_name = Module.concat(__MODULE__, MSSQL)
-      
+
       # 各テストの前にテーブルをクリア
       Tds.query!(mssql_name, "TRUNCATE TABLE users", [])
 
@@ -47,7 +47,7 @@ defmodule YesqlMSSQLTest do
         "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)",
         []
       )
-      
+
       {:ok, mssql: mssql_name}
     end
   end
@@ -71,7 +71,7 @@ defmodule YesqlMSSQLTest do
 
     test "新しいユーザーを挿入", %{mssql: conn} do
       result = Queries.insert_user(conn, name: "David", age: 40)
-      
+
       # INSERTクエリはTds.Result構造体を返す
       assert {:ok, %Tds.Result{num_rows: 1}} = result
 
@@ -119,12 +119,16 @@ defmodule YesqlMSSQLTest do
     end
 
     # テーブル作成
-    Tds.query!(conn, """
-      CREATE TABLE users (
-        id INT PRIMARY KEY,
-        name NVARCHAR(255) NOT NULL,
-        age INT NOT NULL
-      )
-    """, [])
+    Tds.query!(
+      conn,
+      """
+        CREATE TABLE users (
+          id INT PRIMARY KEY,
+          name NVARCHAR(255) NOT NULL,
+          age INT NOT NULL
+        )
+      """,
+      []
+    )
   end
 end

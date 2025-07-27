@@ -222,7 +222,6 @@ if Code.ensure_loaded?(Duckdbex) do
       end
     end
 
-
     defp init_parallel_scan(conn, table_name, parallelism, where_clause) do
       # 並列スキャンの初期化
       sql =

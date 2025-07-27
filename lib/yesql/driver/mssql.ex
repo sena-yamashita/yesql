@@ -33,12 +33,13 @@ defmodule Yesql.Driver.MSSQL do
       def execute(_driver, conn, sql, params) do
         # Tdsはパラメータを%Tds.Parameter{}構造体のリストとして期待
         # @1, @2... 形式の名前付きパラメータを使用
-        tds_params = params
-        |> Enum.with_index(1)
-        |> Enum.map(fn {value, index} ->
-          %Tds.Parameter{name: "@#{index}", value: value}
-        end)
-        
+        tds_params =
+          params
+          |> Enum.with_index(1)
+          |> Enum.map(fn {value, index} ->
+            %Tds.Parameter{name: "@#{index}", value: value}
+          end)
+
         case Tds.query(conn, sql, tds_params) do
           {:ok, result} ->
             {:ok, result}
@@ -71,7 +72,8 @@ defmodule Yesql.Driver.MSSQL do
       MSSQL結果セットを標準形式に変換します。
       """
       # SELECTクエリで行が返される場合
-      def process_result(_driver, {:ok, %Tds.Result{columns: columns, rows: rows}}) when is_list(columns) and is_list(rows) do
+      def process_result(_driver, {:ok, %Tds.Result{columns: columns, rows: rows}})
+          when is_list(columns) and is_list(rows) do
         # カラム名を文字列からアトムに変換
         column_atoms = Enum.map(columns, &String.to_atom/1)
 

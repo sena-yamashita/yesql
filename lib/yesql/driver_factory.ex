@@ -23,7 +23,8 @@ defmodule Yesql.DriverFactory do
         Duckdbex -> :duckdb
         MyXQL -> :mysql
         Tds -> :mssql
-        :postgresql -> :postgrex  # postgresqlエイリアスを追加
+        # postgresqlエイリアスを追加
+        :postgresql -> :postgrex
         atom when is_atom(atom) -> atom
         _ -> driver_name
       end

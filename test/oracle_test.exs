@@ -47,23 +47,26 @@ defmodule YesqlOracleTest do
       {:ok, _} = Jamdb.Oracle.query(context[:conn], "DELETE FROM users", [])
 
       # テストデータを挿入
-      {:ok, _} = Jamdb.Oracle.query(
-        context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25)",
-        []
-      )
+      {:ok, _} =
+        Jamdb.Oracle.query(
+          context[:conn],
+          "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25)",
+          []
+        )
 
-      {:ok, _} = Jamdb.Oracle.query(
-        context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (2, 'Bob', 30)",
-        []
-      )
+      {:ok, _} =
+        Jamdb.Oracle.query(
+          context[:conn],
+          "INSERT INTO users (id, name, age) VALUES (2, 'Bob', 30)",
+          []
+        )
 
-      {:ok, _} = Jamdb.Oracle.query(
-        context[:conn],
-        "INSERT INTO users (id, name, age) VALUES (3, 'Charlie', 35)",
-        []
-      )
+      {:ok, _} =
+        Jamdb.Oracle.query(
+          context[:conn],
+          "INSERT INTO users (id, name, age) VALUES (3, 'Charlie', 35)",
+          []
+        )
 
       # 変更をコミット
       {:ok, _} = Jamdb.Oracle.query(context[:conn], "COMMIT", [])
@@ -152,13 +155,14 @@ defmodule YesqlOracleTest do
     end
 
     # テーブル作成
-    {:ok, _} = Jamdb.Oracle.query(conn, """
-      CREATE TABLE users (
-        id NUMBER(10) PRIMARY KEY,
-        name VARCHAR2(255) NOT NULL,
-        age NUMBER(3) NOT NULL
-      )
-    """)
+    {:ok, _} =
+      Jamdb.Oracle.query(conn, """
+        CREATE TABLE users (
+          id NUMBER(10) PRIMARY KEY,
+          name VARCHAR2(255) NOT NULL,
+          age NUMBER(3) NOT NULL
+        )
+      """)
 
     # 変更をコミット
     {:ok, _} = Jamdb.Oracle.query(conn, "COMMIT", [])

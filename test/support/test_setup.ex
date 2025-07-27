@@ -1,7 +1,7 @@
 defmodule Yesql.TestSetup do
   @moduledoc """
   Ectoを使用した統一的なテスト環境セットアップ
-  
+
   各データベースドライバーの直接テストは残しつつ、
   セットアップとマイグレーションはEctoで統一する
   """
@@ -23,7 +23,7 @@ defmodule Yesql.TestSetup do
 
   def setup_database(db_type) do
     IO.puts("Setting up #{db_type} test database...")
-    
+
     with :ok <- create_database(db_type),
          :ok <- run_migrations(db_type),
          :ok <- seed_test_data(db_type) do
@@ -51,6 +51,7 @@ defmodule Yesql.TestSetup do
         Postgrex.query(conn, "CREATE DATABASE yesql_test", [])
         GenServer.stop(conn)
         :ok
+
       _ ->
         # データベースが既に存在する可能性
         :ok
@@ -70,6 +71,7 @@ defmodule Yesql.TestSetup do
         MyXQL.query(conn, "CREATE DATABASE IF NOT EXISTS yesql_test")
         GenServer.stop(conn)
         :ok
+
       _ ->
         :ok
     end
@@ -86,12 +88,18 @@ defmodule Yesql.TestSetup do
 
     case Tds.start_link(config) do
       {:ok, conn} ->
-        Tds.query(conn, """
-          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
-          CREATE DATABASE yesql_test
-        """, [])
+        Tds.query(
+          conn,
+          """
+            IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
+            CREATE DATABASE yesql_test
+          """,
+          []
+        )
+
         GenServer.stop(conn)
         :ok
+
       _ ->
         :ok
     end
@@ -100,10 +108,10 @@ defmodule Yesql.TestSetup do
   defp run_migrations(db_type) do
     # Ectoマイグレーションを使用してテーブルを作成
     repo = get_repo(db_type)
-    
+
     # リポジトリを起動
     {:ok, _} = repo.start_link()
-    
+
     # テーブルを削除して再作成
     Ecto.Adapters.SQL.query!(repo, """
       DROP TABLE IF EXISTS large_data CASCADE;
@@ -114,10 +122,10 @@ defmodule Yesql.TestSetup do
 
     # 共通テーブルを作成
     create_common_tables(repo)
-    
+
     # データベース固有のテーブルを作成
     create_db_specific_tables(repo, db_type)
-    
+
     :ok
   end
 
@@ -217,7 +225,7 @@ defmodule Yesql.TestSetup do
 
   defp seed_test_data(db_type) do
     repo = get_repo(db_type)
-    
+
     # 基本的なテストデータを挿入
     Ecto.Adapters.SQL.query!(repo, """
       INSERT INTO users (name, age, email) VALUES

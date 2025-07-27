@@ -224,10 +224,15 @@ defmodule TestHelper do
     case Tds.start_link(setup_opts) do
       {:ok, setup_conn} ->
         # データベースが存在しない場合は作成
-        Tds.query(setup_conn, """
-          IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
-          CREATE DATABASE yesql_test
-        """, [])
+        Tds.query(
+          setup_conn,
+          """
+            IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test')
+            CREATE DATABASE yesql_test
+          """,
+          []
+        )
+
         GenServer.stop(setup_conn)
 
         # yesql_testデータベースに接続
@@ -278,10 +283,11 @@ defmodule TestHelper do
     opts = [
       database: ":memory:"
     ]
-    
+
     case Exqlite.start_link(opts) do
       {:ok, conn} ->
         {:ok, sqlite: conn}
+
       {:error, _} ->
         :skip
     end

@@ -211,7 +211,7 @@ defmodule Yesql.Batch do
           # エラーで停止
           {:error, e.message, Enum.reverse(results)}
         end
-        
+
       e ->
         if on_error == :continue do
           # エラーを記録して続行
@@ -231,7 +231,7 @@ defmodule Yesql.Batch do
   defp execute_pipeline(driver, conn, [fn_head | fn_tail], results) do
     # 前の結果を使って次のクエリを生成
     last_result = List.first(results)
-    
+
     try do
       {sql, params} = fn_head.(last_result)
 
@@ -251,6 +251,7 @@ defmodule Yesql.Batch do
     rescue
       e in DBConnection.EncodeError ->
         {:error, e.message, Enum.reverse(results)}
+
       e ->
         {:error, inspect(e), Enum.reverse(results)}
     end

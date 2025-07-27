@@ -101,11 +101,11 @@ defmodule Yesql.Driver.DuckDB do
         case Duckdbex.query(conn, sql, params) do
           {:ok, result_ref} ->
             fetch_and_format_results(result_ref)
+
           error ->
             error
         end
       end
-
 
       # パラメータ付きクエリを実行
       defp execute_parameterized(conn, sql, params) do
@@ -113,6 +113,7 @@ defmodule Yesql.Driver.DuckDB do
         case Duckdbex.query(conn, sql, params) do
           {:ok, result_ref} ->
             fetch_and_format_results(result_ref)
+
           error ->
             error
         end
@@ -252,7 +253,7 @@ defmodule Yesql.Driver.DuckDB do
       def process_result(_driver, {:ok, result}) do
         # デバッグ出力（後で削除）
         # IO.inspect(result, label: "DuckDB Result")
-        
+
         case result do
           %{columns: columns, rows: rows} when is_list(rows) ->
             # 行がキーワードリストの場合の処理

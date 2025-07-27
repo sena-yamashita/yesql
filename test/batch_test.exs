@@ -34,6 +34,7 @@ defmodule BatchTest do
       %{conn: conn} when not is_nil(conn) ->
         Postgrex.query!(conn, "DELETE FROM batch_test", [])
         :ok
+
       _ ->
         :ok
     end

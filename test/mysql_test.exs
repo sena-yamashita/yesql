@@ -19,13 +19,13 @@ defmodule YesqlMySQLTest do
         {:ok, ctx} ->
           # テーブル作成
           setup_database(ctx[:mysql])
-          
+
           # 初期データを挿入
           MyXQL.query!(
             ctx[:mysql],
             "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)"
           )
-          
+
           ctx
 
         _ ->

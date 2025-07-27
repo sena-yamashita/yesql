@@ -1,7 +1,7 @@
 defmodule PostgreSQLStreamingTest do
   use ExUnit.Case
   import TestHelper
-  
+
   # スキップを解除してテストを実行
 
   setup_all do
@@ -159,7 +159,7 @@ defmodule PostgreSQLStreamingTest do
     test "複数のストリーミングクエリの並行実行", %{postgrex: conn} do
       # TODO: 並行実行時の接続管理を改善する必要がある
       # 現在は同じ接続を複数のタスクで使用しようとしてエラーになる
-      
+
       # 複数のストリームを作成
       {:ok, stream1} =
         Yesql.Stream.query(
@@ -274,17 +274,19 @@ defmodule PostgreSQLStreamingTest do
       # 実際の合計値は、データベースの状態により異なる可能性がある
       # 両方のカーソルからデータが取得できていることを確認
       IO.puts("Cursor1 sum: #{sum1}, Cursor2 sum: #{sum2}")
-      
+
       # sum1とsum2が妥当な範囲内であることを確認
       # cursor1は value < 5000 のデータ
       # cursor2は value >= 5000 のデータ
-      assert sum1 < sum2  # 高い値の方が合計も大きいはず
+      # 高い値の方が合計も大きいはず
+      assert sum1 < sum2
     end
   end
 
   describe "PostgreSQL ストリーミングのパフォーマンス" do
     @tag :performance
-    @tag :skip  # TODO: 大量データのテストは環境を整えてから実行
+    # TODO: 大量データのテストは環境を整えてから実行
+    @tag :skip
     setup [:create_large_streaming_table]
 
     test "100万行のストリーミング処理", %{postgrex: conn} do
@@ -346,7 +348,7 @@ defmodule PostgreSQLStreamingTest do
 
   defp create_streaming_test_table(ctx) do
     conn = ctx[:postgrex]
-    
+
     unless conn do
       :ok
     else
@@ -392,7 +394,7 @@ defmodule PostgreSQLStreamingTest do
 
   defp create_large_streaming_table(ctx) do
     conn = ctx[:postgrex]
-    
+
     unless conn do
       :ok
     else
