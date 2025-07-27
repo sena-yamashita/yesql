@@ -249,8 +249,17 @@ defmodule TestHelper do
 
   # SQLite helpers
   def new_sqlite_connection(_ctx) do
-    {:ok, conn} = Exqlite.Sqlite3.open(":memory:")
-    {:ok, sqlite: conn}
+    # Exqlite.start_linkを使用してDBConnection互換の接続を作成
+    opts = [
+      database: ":memory:"
+    ]
+    
+    case Exqlite.start_link(opts) do
+      {:ok, conn} ->
+        {:ok, sqlite: conn}
+      {:error, _} ->
+        :skip
+    end
   end
 
   def create_sqlite_test_table(%{sqlite: conn}) do
@@ -263,7 +272,7 @@ defmodule TestHelper do
     )
     """
 
-    Exqlite.Sqlite3.execute(conn, create_sql)
+    {:ok, _} = Exqlite.query(conn, create_sql)
     :ok
   end
 

@@ -1,3 +1,4 @@
+-- name: complex_join
 -- SQLiteで複雑なJOINクエリ
 SELECT u.name, u.age, COUNT(p.id) as post_count
 FROM users u

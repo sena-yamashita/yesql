@@ -43,7 +43,13 @@ defmodule Yesql.Driver.SQLite do
       @doc """
       SQLiteの結果をマップのリストに変換する
       """
-      def process_result(_driver, {:ok, result}) do
+      def process_result(_driver, {:ok, result}) when is_list(result) do
+        # 既にマップのリストとして処理されている場合
+        {:ok, result}
+      end
+
+      def process_result(_driver, {:ok, result}) when is_map(result) do
+        # Exqlite.Result形式の場合
         columns =
           result.columns
           |> Enum.map(&String.to_atom/1)

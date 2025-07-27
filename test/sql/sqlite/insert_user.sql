@@ -1,2 +1,3 @@
--- 新しいユーザーを追加
-INSERT INTO users (name, age) VALUES (:name, :age)
+-- name: insert_user
+-- SQLiteにユーザーを挿入
+INSERT INTO users (name, age, email) VALUES (:name, :age, :email);
