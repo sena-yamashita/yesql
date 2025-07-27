@@ -20,6 +20,10 @@ defmodule Mix.Tasks.Test.Yesql.Params do
       
       # テストモード（既知の問題をスキップ）
       mix test.yesql.params --test
+      
+      # トークナイザを指定
+      mix test.yesql.params --tokenizer nimble --test
+      mix test.yesql.params -t nimble "SELECT id::integer FROM users WHERE name = :name"
 
   ## オプション
 
@@ -28,6 +32,7 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     * `-f, --file` - SQLファイルから読み込み
     * `--format` - 出力形式 (pretty, simple, json)
     * `--test` - テストモード（既知の問題をスキップ）
+    * `-t, --tokenizer` - トークナイザを指定 (default, nimble)
 
   ## 例
 
@@ -54,27 +59,77 @@ defmodule Mix.Tasks.Test.Yesql.Params do
 
   @drivers ~w(postgresql mysql mssql oracle sqlite duckdb ecto)
   
-  # 既知の問題（デフォルトトークナイザでは対応できないケース）
+  # トークナイザ別の既知の問題
   @known_issues %{
-    "キャスト構文" => %{
-      sql: "SELECT id::integer, name::text FROM users WHERE created_at > :date",
-      skip_reason: "デフォルトトークナイザは::キャスト構文に対応していません",
-      affected_drivers: :all
+    default: %{
+      "キャスト構文" => %{
+        sql: "SELECT id::integer, name::text FROM users WHERE created_at > :date",
+        skip_reason: nil,  # 実際にはデフォルトトークナイザも対応している
+        affected_drivers: :all,
+        expected_to_pass: true
+      },
+      "IN句の配列パラメータ" => %{
+        sql: "SELECT * FROM users WHERE id IN (:ids)",
+        skip_reason: "配列パラメータの展開はドライバー固有の実装が必要",
+        affected_drivers: :all,
+        expected_to_pass: true  # パラメータ解析自体は成功
+      },
+      "JSONパス演算子" => %{
+        sql: "SELECT data->>'name' FROM users WHERE data @> :filter",
+        skip_reason: "JSON演算子の解析には高度なトークナイザが必要",
+        affected_drivers: [:postgresql],
+        expected_to_pass: true  # パラメータ解析自体は成功
+      },
+      "ウィンドウ関数の複雑な構文" => %{
+        sql: "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table",
+        skip_reason: "OVER句内のパラメータ解析は現在未対応",
+        affected_drivers: :all,
+        expected_to_pass: true  # パラメータ解析自体は成功
+      },
+      "文字列内のコロン" => %{
+        sql: "SELECT * FROM logs WHERE message = 'Error: :not_param' AND level = :level",
+        skip_reason: nil,
+        affected_drivers: :all,
+        expected_to_pass: true
+      },
+      "コメント内のパラメータ" => %{
+        sql: "SELECT * FROM users -- :comment_param\nWHERE id = :id",
+        skip_reason: "デフォルトトークナイザはコメント内のパラメータを誤認識する可能性",
+        affected_drivers: :all,
+        expected_to_pass: true  # 実際にはコメント行が削除されるため成功
+      }
     },
-    "IN句の配列パラメータ" => %{
-      sql: "SELECT * FROM users WHERE id IN (:ids)",
-      skip_reason: "配列パラメータの展開はドライバー固有の実装が必要",
-      affected_drivers: :all
-    },
-    "JSONパス演算子" => %{
-      sql: "SELECT data->>'name' FROM users WHERE data @> :filter",
-      skip_reason: "JSON演算子の解析には高度なトークナイザが必要",
-      affected_drivers: [:postgresql]
-    },
-    "ウィンドウ関数の複雑な構文" => %{
-      sql: "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table",
-      skip_reason: "OVER句内のパラメータ解析は現在未対応",
-      affected_drivers: :all
+    nimble: %{
+      "キャスト構文" => %{
+        sql: "SELECT id::integer, name::text FROM users WHERE created_at > :date",
+        skip_reason: nil,  # Nimbleトークナイザは対応している
+        affected_drivers: :all,
+        expected_to_pass: true
+      },
+      "IN句の配列パラメータ" => %{
+        sql: "SELECT * FROM users WHERE id IN (:ids)",
+        skip_reason: "配列パラメータの展開はドライバー固有の実装が必要",
+        affected_drivers: :all,
+        expected_to_pass: true
+      },
+      "JSONパス演算子" => %{
+        sql: "SELECT data->>'name' FROM users WHERE data @> :filter",
+        skip_reason: nil,  # Nimbleトークナイザは対応している
+        affected_drivers: [:postgresql],
+        expected_to_pass: true
+      },
+      "ウィンドウ関数の複雑な構文" => %{
+        sql: "SELECT *, ROW_NUMBER() OVER (PARTITION BY :column ORDER BY :order) FROM table",
+        skip_reason: nil,  # Nimbleトークナイザは対応している
+        affected_drivers: :all,
+        expected_to_pass: true
+      },
+      "複雑なキャスト構文" => %{
+        sql: "SELECT (data->'items')::jsonb ? :key, array_agg(id)::int[] FROM table WHERE name::varchar = :name",
+        skip_reason: nil,
+        affected_drivers: [:postgresql, :duckdb],
+        expected_to_pass: true
+      }
     }
   }
 
@@ -86,12 +141,14 @@ defmodule Mix.Tasks.Test.Yesql.Params do
         all: :boolean,
         file: :string,
         format: :string,
-        test: :boolean
+        test: :boolean,
+        tokenizer: :string
       ],
       aliases: [
         d: :driver,
         a: :all,
-        f: :file
+        f: :file,
+        t: :tokenizer
       ]
     )
 
@@ -101,10 +158,13 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     # 必要な依存関係を確認
     Application.ensure_all_started(:postgrex)
     Application.ensure_all_started(:ecto)
+    
+    # トークナイザを設定
+    tokenizer = setup_tokenizer(opts[:tokenizer])
 
     cond do
       opts[:test] ->
-        handle_test_mode(opts)
+        handle_test_mode(opts, tokenizer)
         
       opts[:file] ->
         handle_file_mode(opts)
@@ -118,9 +178,22 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     end
   end
 
-  defp handle_test_mode(_opts) do
+  defp setup_tokenizer(nil), do: :default
+  defp setup_tokenizer("default"), do: :default
+  defp setup_tokenizer("nimble") do
+    Yesql.Config.put_tokenizer(Yesql.Tokenizer.NimbleParsecImpl)
+    :nimble
+  end
+  defp setup_tokenizer(name) do
+    IO.puts("⚠️  不明なトークナイザ: #{name}")
+    IO.puts("   利用可能: default, nimble")
+    :default
+  end
+
+  defp handle_test_mode(_opts, tokenizer) do
     IO.puts("\n🧪 YesQL パラメータ変換テスト")
     IO.puts("=" <> String.duplicate("=", 50))
+    IO.puts("トークナイザ: #{format_tokenizer_name(tokenizer)}")
     IO.puts("\n基本的なパラメータ変換のテスト:")
     
     # 基本的なテストケース
@@ -153,18 +226,59 @@ defmodule Mix.Tasks.Test.Yesql.Params do
       end
     end)
     
-    IO.puts("\n既知の問題のテスト（スキップ）:")
+    IO.puts("\n既知の問題のテスト:")
     
-    skipped = Enum.reduce(@known_issues, 0, fn {name, issue}, acc ->
+    known_issues = Map.get(@known_issues, tokenizer, %{})
+    
+    {known_passed, known_failed, skipped} = Enum.reduce(known_issues, {0, 0, 0}, fn {name, issue}, {kp, kf, s} ->
       IO.write("  #{String.pad_trailing(name, 30)} ... ")
-      IO.puts("⏭️  SKIP (#{issue.skip_reason})")
-      acc + 1
+      
+      if issue.skip_reason do
+        # 本当にスキップする場合
+        IO.puts("⏭️  SKIP (#{issue.skip_reason})")
+        {kp, kf, s + 1}
+      else
+        # テストを実行
+        try do
+          {converted, _params} = test_all_drivers(issue.sql)
+          success = Enum.all?(converted, fn {_, c} -> is_binary(c) end)
+          
+          if success do
+            if issue.expected_to_pass do
+              IO.puts("✅ PASS (期待通り)")
+              {kp + 1, kf, s}
+            else
+              IO.puts("⚠️  PASS (想定外 - トークナイザが改善された可能性)")
+              {kp + 1, kf, s}
+            end
+          else
+            if issue.expected_to_pass do
+              IO.puts("❌ FAIL (想定外)")
+              {kp, kf + 1, s}
+            else
+              IO.puts("❌ FAIL (期待通り)")
+              {kp, kf + 1, s}
+            end
+          end
+        rescue
+          e ->
+            if issue.expected_to_pass do
+              IO.puts("❌ ERROR: #{inspect(e)}")
+              {kp, kf + 1, s}
+            else
+              IO.puts("❌ ERROR (期待通り): #{inspect(e)}")
+              {kp, kf + 1, s}
+            end
+        end
+      end
     end)
     
     IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts("テスト結果: #{passed} PASS, #{failed} FAIL, #{skipped} SKIP")
+    IO.puts("基本テスト: #{passed} PASS, #{failed} FAIL")
+    IO.puts("既知の問題: #{known_passed} PASS, #{known_failed} FAIL, #{skipped} SKIP")
+    IO.puts("合計: #{passed + known_passed} PASS, #{failed + known_failed} FAIL, #{skipped} SKIP")
     
-    if failed > 0 do
+    if failed > 0 or (tokenizer == :nimble and known_failed > 0) do
       System.at_exit(fn _ -> exit({:shutdown, 1}) end)
     end
   end
@@ -429,5 +543,13 @@ defmodule Mix.Tasks.Test.Yesql.Params do
     |> String.split("\n")
     |> Enum.map(&("  " <> &1))
     |> Enum.join("\n")
+  end
+  
+  defp format_tokenizer_name(tokenizer) do
+    case tokenizer do
+      :default -> "Default (Leex)"
+      :nimble -> "NimbleParsec"
+      _ -> to_string(tokenizer)
+    end
   end
 end
