@@ -82,7 +82,14 @@
       "Bash(make:*)",
       "Bash(docker logs:*)",
       "Bash(docker-compose:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(FULL_TEST=true mix test test/postgresql_test.exs --only test:\"ENUM型のサポート\")",
+      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:170 --trace)",
+      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:170)",
+      "Bash(export FULL_TEST=true)",
+      "Bash(export POSTGRES_HOST=localhost)",
+      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs --include integration)",
+      "Bash(FULL_TEST=true POSTGRES_HOST=localhost mix test test/postgresql_test.exs:132)"
     ],
     "deny": []
   }

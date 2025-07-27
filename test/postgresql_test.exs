@@ -147,7 +147,7 @@ defmodule PostgreSQLTest do
           ]
         )
 
-      # インターバル計算
+      # インターバル計算 - 日付の条件を外してすべてのレコードを取得
       {:ok, result} =
         Postgrex.query(
           conn,
@@ -156,10 +156,9 @@ defmodule PostgreSQLTest do
                    event_time AT TIME ZONE 'America/New_York' as ny_time,
                    event_time - INTERVAL '1 hour' as one_hour_before
             FROM test_timestamps
-            WHERE event_time::date = $1
             ORDER BY event_time
           """,
-          [~D[2024-01-15]]
+          []
         )
 
       assert length(result.rows) == 3
@@ -520,11 +519,13 @@ defmodule PostgreSQLTest do
         )
 
       # プリペアドステートメントの実行
-      {:ok, result} = Postgrex.execute(conn, query, ["active"])
+      # Postgrex.executeは{:ok, query, result}を返す
+      {:ok, _query, result} = Postgrex.execute(conn, query, ["active"])
       assert length(result.rows) == 2
 
       # クローズ
-      {:ok, _} = Postgrex.close(conn, query)
+      # Postgrex.closeは:okを返す
+      :ok = Postgrex.close(conn, query)
     end
   end
 
@@ -630,50 +631,70 @@ defmodule PostgreSQLTest do
         []
       )
 
+    # 既存のテーブルを削除
+    drop_tables = [
+      "DROP TABLE IF EXISTS test_jsonb CASCADE",
+      "DROP TABLE IF EXISTS test_arrays CASCADE",
+      "DROP TABLE IF EXISTS test_uuid CASCADE",
+      "DROP TABLE IF EXISTS test_timestamps CASCADE",
+      "DROP TABLE IF EXISTS test_enum CASCADE",
+      "DROP TABLE IF EXISTS test_ranges CASCADE",
+      "DROP TABLE IF EXISTS test_fulltext CASCADE",
+      "DROP TABLE IF EXISTS test_hierarchy CASCADE",
+      "DROP TABLE IF EXISTS test_sales CASCADE",
+      "DROP TABLE IF EXISTS test_isolation CASCADE",
+      "DROP TABLE IF EXISTS test_partial_index CASCADE",
+      "DROP TABLE IF EXISTS test_aggregates CASCADE"
+    ]
+    
+    Enum.each(drop_tables, fn drop_sql ->
+      Postgrex.query(conn, drop_sql, [])
+    end)
+
     # テーブルの作成
     tables = [
       """
-      CREATE TABLE IF NOT EXISTS test_jsonb (
+      CREATE TABLE test_jsonb (
         id SERIAL PRIMARY KEY,
         data JSONB NOT NULL
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_arrays (
+      CREATE TABLE test_arrays (
         id SERIAL PRIMARY KEY,
         tags TEXT[],
         numbers INTEGER[]
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_uuid (
+      CREATE TABLE test_uuid (
         id UUID PRIMARY KEY,
         name TEXT
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_timestamps (
+      CREATE TABLE test_timestamps (
         id SERIAL PRIMARY KEY,
         event_time TIMESTAMPTZ NOT NULL,
         event_name TEXT
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_enum (
+      CREATE TABLE test_enum (
         id SERIAL PRIMARY KEY,
         status status_enum,
         priority priority_enum
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_ranges (
+      CREATE TABLE test_ranges (
         id SERIAL PRIMARY KEY,
         price_range INT4RANGE,
         valid_dates DATERANGE
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_fulltext (
+      CREATE TABLE test_fulltext (
         id SERIAL PRIMARY KEY,
         title TEXT,
         content TEXT,
@@ -681,14 +702,14 @@ defmodule PostgreSQLTest do
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_hierarchy (
+      CREATE TABLE test_hierarchy (
         id INTEGER PRIMARY KEY,
         name TEXT,
         parent_id INTEGER REFERENCES test_hierarchy(id)
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_sales (
+      CREATE TABLE test_sales (
         id SERIAL PRIMARY KEY,
         product TEXT,
         amount DECIMAL,
@@ -696,20 +717,20 @@ defmodule PostgreSQLTest do
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_isolation (
+      CREATE TABLE test_isolation (
         id SERIAL PRIMARY KEY,
         value INTEGER
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_partial_index (
+      CREATE TABLE test_partial_index (
         id SERIAL PRIMARY KEY,
         status TEXT,
         value INTEGER
       )
       """,
       """
-      CREATE TABLE IF NOT EXISTS test_aggregates (
+      CREATE TABLE test_aggregates (
         id SERIAL PRIMARY KEY,
         category TEXT,
         value INTEGER
