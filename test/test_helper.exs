@@ -153,7 +153,7 @@ defmodule TestHelper do
   def truncate_duckdb_ducks(_), do: :skip
 
   # MySQL helpers
-  def new_mysql_connection(_ctx) do
+  def new_mysql_connection(ctx) do
     # まずデータベースなしで接続してyesql_testデータベースを作成
     setup_opts = [
       hostname: System.get_env("MYSQL_HOST", "localhost"),
@@ -168,13 +168,14 @@ defmodule TestHelper do
         MyXQL.query(setup_conn, "CREATE DATABASE IF NOT EXISTS yesql_test")
         GenServer.stop(setup_conn)
 
-        # yesql_testデータベースに接続
+        # yesql_testデータベースに接続（プロセス名を設定）
         opts = [
           hostname: System.get_env("MYSQL_HOST", "localhost"),
           username: System.get_env("MYSQL_USER", "root"),
           password: System.get_env("MYSQL_PASSWORD", "root"),
           database: System.get_env("MYSQL_DATABASE", "yesql_test"),
-          port: String.to_integer(System.get_env("MYSQL_PORT", "3306"))
+          port: String.to_integer(System.get_env("MYSQL_PORT", "3306")),
+          name: Module.concat(ctx.module, MySQL)
         ]
 
         case MyXQL.start_link(opts) do

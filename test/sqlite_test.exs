@@ -2,7 +2,6 @@ defmodule SQLiteTest do
   use ExUnit.Case, async: false
 
   @moduletag :sqlite
-  @moduletag :skip  # 一時的にスキップ - 接続問題を調査中
 
   # 環境変数でSQLiteテストを有効化
 
@@ -55,43 +54,36 @@ defmodule SQLiteTest do
       File.mkdir_p!("test/sql/sqlite")
 
       File.write!("test/sql/sqlite/select_users.sql", """
-      -- name: select_users
       -- SQLiteで全ユーザーを取得
-      SELECT * FROM users ORDER BY id;
+      SELECT * FROM users WHERE name = :name ORDER BY id;
       """)
 
       File.write!("test/sql/sqlite/select_user_by_id.sql", """
-      -- name: select_user_by_id
       -- SQLiteで特定のユーザーを取得
       SELECT * FROM users WHERE id = :id;
       """)
 
       File.write!("test/sql/sqlite/select_users_by_age.sql", """
-      -- name: select_users_by_age
       -- SQLiteで年齢範囲でユーザーを検索
       SELECT * FROM users WHERE age >= :min_age AND age <= :max_age ORDER BY age;
       """)
 
       File.write!("test/sql/sqlite/insert_user.sql", """
-      -- name: insert_user
       -- SQLiteにユーザーを挿入
       INSERT INTO users (name, age, email) VALUES (:name, :age, :email);
       """)
 
       File.write!("test/sql/sqlite/update_user_age.sql", """
-      -- name: update_user_age
       -- SQLiteでユーザーの年齢を更新
       UPDATE users SET age = :age WHERE id = :id;
       """)
 
       File.write!("test/sql/sqlite/delete_user.sql", """
-      -- name: delete_user
       -- SQLiteからユーザーを削除
       DELETE FROM users WHERE id = :id;
       """)
 
       File.write!("test/sql/sqlite/complex_join.sql", """
-      -- name: complex_join
       -- SQLiteで複雑なJOINクエリ
       SELECT u.name, u.age, COUNT(p.id) as post_count
       FROM users u
@@ -113,16 +105,54 @@ defmodule SQLiteTest do
     end
   end
 
-  setup %{conn: _conn} = context do
-    # 各テスト用のコンテキスト設定
-    context
+  setup context do
+    case context do
+      %{conn: conn} ->
+        # 各テストの前にデータをクリーンアップ
+        # 外部キー制約のため、postsを先に削除
+        {:ok, _} = Exqlite.query(conn, "DELETE FROM posts")
+        
+        # usersテーブルのデータを削除してリセット
+        {:ok, _} = Exqlite.query(conn, "DELETE FROM users")
+        
+        # SQLiteのAUTOINCREMENTシーケンスをリセット
+        {:ok, _} = Exqlite.query(conn, "DELETE FROM sqlite_sequence WHERE name='users'")
+        {:ok, _} = Exqlite.query(conn, "DELETE FROM sqlite_sequence WHERE name='posts'")
+        
+        # 初期データを再挿入（IDは自動生成される）
+        {:ok, _} = Exqlite.query(
+          conn,
+          "INSERT INTO users (name, age, email) VALUES (?, ?, ?)",
+          ["Alice", 25, "alice@example.com"]
+        )
+        
+        {:ok, _} = Exqlite.query(
+          conn,
+          "INSERT INTO users (name, age, email) VALUES (?, ?, ?)",
+          ["Bob", 30, "bob@example.com"]
+        )
+        
+        # 挿入されたユーザーのIDを取得
+        {:ok, alice_result} = Exqlite.query(conn, "SELECT id FROM users WHERE name = 'Alice'")
+        {:ok, bob_result} = Exqlite.query(conn, "SELECT id FROM users WHERE name = 'Bob'")
+        
+        [[alice_id]] = alice_result.rows
+        [[bob_id]] = bob_result.rows
+        
+        # 各テスト用のコンテキスト設定
+        Map.merge(context, %{alice_id: alice_id, bob_id: bob_id})
+        
+      _ ->
+        # 接続がない場合はスキップ
+        context
+    end
   end
 
-  # SQLiteテストが有効な場合のみクエリモジュールを定義
-  if System.get_env("CI") || System.get_env("SQLITE_TEST") == "true" do
-    defmodule Queries do
-      use Yesql, driver: :sqlite
-
+  defmodule Queries do
+    use Yesql, driver: :sqlite
+    
+    # SQLファイルが存在する場合のみdefqueryを実行
+    if File.exists?("test/sql/sqlite/select_users.sql") do
       Yesql.defquery("test/sql/sqlite/select_users.sql")
       Yesql.defquery("test/sql/sqlite/select_user_by_id.sql")
       Yesql.defquery("test/sql/sqlite/select_users_by_age.sql")
@@ -146,8 +176,8 @@ defmodule SQLiteTest do
       assert hd(bob_results).name == "Bob"
     end
 
-    test "IDによるユーザー取得", %{conn: conn} do
-      {:ok, users} = Queries.select_user_by_id(conn, id: 1)
+    test "IDによるユーザー取得", %{conn: conn, alice_id: alice_id} do
+      {:ok, users} = Queries.select_user_by_id(conn, id: alice_id)
 
       assert length(users) == 1
       assert hd(users).name == "Alice"
@@ -175,15 +205,15 @@ defmodule SQLiteTest do
       assert length(results) == 1
     end
 
-    test "ユーザーの更新", %{conn: conn} do
-      {:ok, _} = Queries.update_user_age(conn, id: 1, age: 26)
+    test "ユーザーの更新", %{conn: conn, alice_id: alice_id} do
+      {:ok, _} = Queries.update_user_age(conn, id: alice_id, age: 26)
 
-      {:ok, users} = Queries.select_user_by_id(conn, id: 1)
+      {:ok, users} = Queries.select_user_by_id(conn, id: alice_id)
       assert hd(users).age == 26
     end
 
-    test "ユーザーの削除", %{conn: conn} do
-      {:ok, _} = Queries.delete_user(conn, id: 2)
+    test "ユーザーの削除", %{conn: conn, bob_id: bob_id} do
+      {:ok, _} = Queries.delete_user(conn, id: bob_id)
 
       # Bobが削除されたことを確認
       {:ok, bob_results} = Queries.select_users(conn, name: "Bob")
@@ -196,7 +226,7 @@ defmodule SQLiteTest do
   end
 
   describe "SQLite固有の機能" do
-    test "AUTOINCREMENT主キー", %{conn: conn} do
+    test "AUTOINCREMENT主キー", %{conn: conn, alice_id: alice_id, bob_id: bob_id} do
       # 複数のユーザーを追加
       {:ok, _} = Queries.insert_user(conn, name: "User1", age: 20, email: "user1@example.com")
       {:ok, _} = Queries.insert_user(conn, name: "User2", age: 21, email: "user2@example.com")
@@ -204,20 +234,21 @@ defmodule SQLiteTest do
       # User1を検索してIDが自動増分されていることを確認
       {:ok, user1_results} = Queries.select_users(conn, name: "User1")
       assert length(user1_results) == 1
-      assert hd(user1_results).id > 2  # Alice=1, Bob=2の後のID
+      max_initial_id = max(alice_id, bob_id)
+      assert hd(user1_results).id > max_initial_id  # 既存のIDの後
 
       {:ok, user2_results} = Queries.select_users(conn, name: "User2")
       assert length(user2_results) == 1
       assert hd(user2_results).id > hd(user1_results).id  # User1より大きいID
     end
 
-    test "複雑なJOINクエリ", %{conn: conn} do
+    test "複雑なJOINクエリ", %{conn: conn, alice_id: alice_id} do
       # ポストデータを追加
       insert_post_sql = "INSERT INTO posts (user_id, title, body) VALUES (?, ?, ?)"
       
       # Aliceに2つのポスト
-      {:ok, _} = Exqlite.query(conn, insert_post_sql, [1, "Post 1", "Body 1"])
-      {:ok, _} = Exqlite.query(conn, insert_post_sql, [1, "Post 2", "Body 2"])
+      {:ok, _} = Exqlite.query(conn, insert_post_sql, [alice_id, "Post 1", "Body 1"])
+      {:ok, _} = Exqlite.query(conn, insert_post_sql, [alice_id, "Post 2", "Body 2"])
 
       # 結果を確認
       {:ok, results} = Queries.complex_join(conn, min_age: 20)

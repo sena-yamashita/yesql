@@ -38,12 +38,18 @@ defmodule YesqlMySQLTest do
     end
   end
 
-  # setupフックを削除し、各テストが独立して動作するようにする
+  setup context do
+    if context[:skip] do
+      {:ok, skip: true}
+    else
+      # MySQLプロセス名を取得
+      mysql_name = Module.concat(__MODULE__, MySQL)
+      {:ok, mysql: mysql_name}
+    end
+  end
 
   describe "MySQLドライバー" do
-    @tag :skip
     test "名前でユーザーを検索", %{mysql: conn} do
-      # 一時的にスキップ - 接続問題を調査中
       {:ok, users} = Queries.select_users_by_name(conn, name: "Alice")
 
       assert length(users) == 1
@@ -51,9 +57,7 @@ defmodule YesqlMySQLTest do
       assert hd(users)[:age] == 25
     end
 
-    @tag :skip
     test "年齢範囲でユーザーを検索", %{mysql: conn} do
-      # 一時的にスキップ - 接続問題を調査中
       {:ok, users} = Queries.select_users_by_age_range(conn, min_age: 26, max_age: 35)
 
       assert length(users) == 2
@@ -61,9 +65,7 @@ defmodule YesqlMySQLTest do
       assert Enum.map(users, & &1[:age]) == [30, 35]
     end
 
-    @tag :skip
     test "新しいユーザーを挿入", %{mysql: conn} do
-      # 一時的にスキップ - 接続問題を調査中
       {:ok, result} = Queries.insert_user(conn, name: "David", age: 40)
 
       assert result.num_rows == 1
@@ -88,9 +90,7 @@ defmodule YesqlMySQLTest do
   end
 
   describe "エラーハンドリング" do
-    @tag :skip
     test "無効なクエリはエラーを返す", %{mysql: conn} do
-      # 一時的にスキップ - 接続問題を調査中
       # 存在しないテーブルへのクエリ
       {:error, %MyXQL.Error{}} = MyXQL.query(conn, "SELECT * FROM nonexistent_table")
     end

@@ -110,7 +110,11 @@
       "Bash(MIX_ENV=test mix ecto.reset.yesql)",
       "Bash(MIX_ENV=test mix yesql.test.setup)",
       "Bash(MIX_ENV=test mix ecto.drop.yesql)",
-      "Bash(SQLITE_TEST=true mix test test/sqlite_test.exs)"
+      "Bash(SQLITE_TEST=true mix test test/sqlite_test.exs)",
+      "Bash(source:*)",
+      "Bash(MYSQL_TEST=true mix test test/mysql_test.exs --trace)",
+      "Bash(MYSQL_TEST=true mix test test/mysql_test.exs)",
+      "Bash(for:*)"
     ],
     "deny": []
   }

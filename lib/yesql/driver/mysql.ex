@@ -61,12 +61,13 @@ defmodule Yesql.Driver.MySQL do
       @doc """
       MySQL結果セットを標準形式に変換します。
       """
-      def process_result(_driver, {:ok, %MyXQL.Result{columns: nil, rows: nil}}) do
-        {:ok, []}
+      def process_result(_driver, {:ok, %MyXQL.Result{columns: nil, rows: nil} = result}) do
+        # INSERT/UPDATE/DELETEなどの結果
+        {:ok, result}
       end
 
       def process_result(_driver, {:ok, %MyXQL.Result{columns: columns, rows: rows}})
-          when is_list(rows) do
+          when is_list(rows) and is_list(columns) do
         result =
           Enum.map(rows, fn row ->
             columns
@@ -78,7 +79,7 @@ defmodule Yesql.Driver.MySQL do
       end
 
       def process_result(_driver, {:ok, %MyXQL.Result{} = result}) do
-        # INSERT/UPDATE/DELETEなどの結果
+        # その他の結果（columnsやrowsがnilでない場合も含む）
         {:ok, result}
       end
 
