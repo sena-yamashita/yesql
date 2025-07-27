@@ -524,7 +524,7 @@ defmodule StreamTest do
     Enum.each(1..count, fn i ->
       Exqlite.Sqlite3.bind(statement, [i, "Data for row #{i}"])
       {:ok, :done} = Exqlite.Sqlite3.step(conn, statement)
-      :ok = Exqlite.Sqlite3.reset(conn, statement)
+      :ok = Exqlite.Sqlite3.reset(statement)
     end)
 
     Exqlite.Sqlite3.release(conn, statement)
