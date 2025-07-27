@@ -5,6 +5,6 @@ SELECT
   CAST(int_col AS CHAR) as int_to_text,
   date_col
 FROM cast_test
-WHERE text_col = CAST(:text_value AS CHAR)
+WHERE text_col COLLATE utf8mb4_general_ci = CAST(:text_value AS CHAR)
   AND int_col > CAST(:int_value AS SIGNED)
   AND date_col = CAST(:date_value AS DATE)

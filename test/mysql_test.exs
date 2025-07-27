@@ -18,8 +18,8 @@ defmodule YesqlMySQLTest do
       case TestHelper.new_mysql_connection(%{module: __MODULE__}) do
         {:ok, ctx} ->
           # テーブル作成
-          setup_database(ctx.mysql)
-          {:ok, mysql: ctx.mysql}
+          setup_database(ctx[:mysql])
+          ctx
 
         _ ->
           IO.puts("MySQLテストをスキップします - 接続失敗")
@@ -32,13 +32,13 @@ defmodule YesqlMySQLTest do
   end
 
   setup context do
-    if context[:conn] do
+    if context[:mysql] do
       # 各テストの前にテーブルをクリア
-      MyXQL.query!(context[:conn], "TRUNCATE TABLE users")
+      MyXQL.query!(context[:mysql], "TRUNCATE TABLE users")
 
       # テストデータを挿入
       MyXQL.query!(
-        context[:conn],
+        context[:mysql],
         "INSERT INTO users (id, name, age) VALUES (1, 'Alice', 25), (2, 'Bob', 30), (3, 'Charlie', 35)"
       )
     end
@@ -47,7 +47,7 @@ defmodule YesqlMySQLTest do
   end
 
   describe "MySQLドライバー" do
-    test "名前でユーザーを検索", %{conn: conn} do
+    test "名前でユーザーを検索", %{mysql: conn} do
       {:ok, users} = Queries.select_users_by_name(conn, name: "Alice")
 
       assert length(users) == 1
@@ -55,7 +55,7 @@ defmodule YesqlMySQLTest do
       assert hd(users)[:age] == 25
     end
 
-    test "年齢範囲でユーザーを検索", %{conn: conn} do
+    test "年齢範囲でユーザーを検索", %{mysql: conn} do
       {:ok, users} = Queries.select_users_by_age_range(conn, min_age: 26, max_age: 35)
 
       assert length(users) == 2
@@ -63,7 +63,7 @@ defmodule YesqlMySQLTest do
       assert Enum.map(users, & &1[:age]) == [30, 35]
     end
 
-    test "新しいユーザーを挿入", %{conn: conn} do
+    test "新しいユーザーを挿入", %{mysql: conn} do
       {:ok, result} = Queries.insert_user(conn, name: "David", age: 40)
 
       assert result.num_rows == 1
@@ -75,7 +75,7 @@ defmodule YesqlMySQLTest do
       assert count == 1
     end
 
-    test "パラメータが正しい順序で置換される", %{conn: _conn} do
+    test "パラメータが正しい順序で置換される", %{mysql: _conn} do
       # 複雑なクエリでパラメータの順序をテスト
       sql = "SELECT * FROM users WHERE age > :min_age AND name = :name AND age < :max_age"
       driver = %Yesql.Driver.MySQL{}
@@ -88,7 +88,7 @@ defmodule YesqlMySQLTest do
   end
 
   describe "エラーハンドリング" do
-    test "無効なクエリはエラーを返す", %{conn: conn} do
+    test "無効なクエリはエラーを返す", %{mysql: conn} do
       # 存在しないテーブルへのクエリ
       {:error, %MyXQL.Error{}} = MyXQL.query(conn, "SELECT * FROM nonexistent_table")
     end

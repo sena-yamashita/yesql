@@ -1,6 +1,5 @@
 defmodule DriverCastSyntaxTest do
   use ExUnit.Case
-  import TestHelper
 
   @moduletag :cast_syntax
 
@@ -146,11 +145,20 @@ defmodule DriverCastSyntaxTest do
 
     @tag :mysql
     test "MySQLのCAST関数", %{mysql: conn} do
+      # テストデータの挿入
+      MyXQL.query!(
+        conn,
+        """
+        INSERT INTO cast_test (text_col, int_col, date_col)
+        VALUES ('123', 456, '2024-01-01'), ('456', 789, '2024-01-02')
+        """
+      )
+      
       # MySQLはCAST関数を使用
       {:ok, results} =
         MySQLQuery.mysql_cast(conn,
           text_value: "123",
-          int_value: 456,
+          int_value: 100,
           date_value: ~D[2024-01-01]
         )
 

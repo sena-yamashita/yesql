@@ -105,7 +105,11 @@
       "Bash(MIX_ENV=test mix test test/batch_test.exs:217)",
       "Bash(MIX_ENV=test mix test test/batch_test.exs:64 test/batch_test.exs:90 test/batch_test.exs:115 test/batch_test.exs:217)",
       "Bash(MIX_ENV=test mix test test/batch_test.exs:185 --trace)",
-      "Bash(MIX_ENV=test mix test test/batch_test.exs:45 --trace)"
+      "Bash(MIX_ENV=test mix test test/batch_test.exs:45 --trace)",
+      "Bash(mix ecto.reset:*)",
+      "Bash(MIX_ENV=test mix ecto.reset.yesql)",
+      "Bash(MIX_ENV=test mix yesql.test.setup)",
+      "Bash(MIX_ENV=test mix ecto.drop.yesql)"
     ],
     "deny": []
   }
