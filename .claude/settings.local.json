@@ -118,7 +118,11 @@
       "Bash(MSSQL_TEST=true mix test test/mssql_test.exs)",
       "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182 -t trace)",
       "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182 --trace)",
-      "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182)"
+      "Bash(SQLITE_TEST=true mix test test/driver_cast_syntax_test.exs:182)",
+      "Bash(FULL_TEST=true mix test test/driver_test.exs --trace)",
+      "Bash(FULL_TEST=true mix test test/driver_test.exs:32)",
+      "Bash(FULL_TEST=true mix test test/driver_test.exs --only postgres)",
+      "Bash(./run-tests.sh:*)"
     ],
     "deny": []
   }

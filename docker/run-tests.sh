@@ -142,9 +142,12 @@ esac
 
 echo -e "\n${GREEN}Tests completed!${NC}"
 
-# オプション: テスト後にサービスを停止
-read -p "Stop database services? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  docker-compose -f docker/docker-compose.yml down
+# CI環境では自動的にスキップ
+if [ -z "$CI" ]; then
+  # オプション: テスト後にサービスを停止
+  read -p "Stop database services? (y/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    docker-compose -f docker/docker-compose.yml down
+  fi
 fi

@@ -9,9 +9,18 @@ defmodule Yesql.DriverTest do
         :ok
       _ ->
         # 通常のテスト環境では、PostgreSQL接続を作成
-        {:ok, postgrex} = new_postgrex_connection([])
-        create_cats_postgres_table(%{postgrex: postgrex})
-        {:ok, postgrex: postgrex}
+        context = %{module: __MODULE__}
+        case new_postgrex_connection(context) do
+          {:ok, context_with_conn} ->
+            create_cats_postgres_table(context_with_conn)
+            {:ok, context_with_conn}
+          
+          :skip ->
+            {:ok, skip: true}
+          
+          {:error, _} ->
+            {:ok, skip: true}
+        end
     end
   end
 

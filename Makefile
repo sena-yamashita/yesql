@@ -23,7 +23,7 @@ docker-test: ## Docker環境ですべてのテストを実行
 
 # データベース別テスト
 test-all: ## すべてのテストを実行（Docker使用）
-	./docker/run-tests.sh all
+	CI=true ./docker/run-tests.sh all
 
 test-postgres: ## PostgreSQLテストを実行
 	./docker/run-tests.sh postgres
