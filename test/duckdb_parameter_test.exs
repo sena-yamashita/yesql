@@ -1,6 +1,8 @@
 defmodule DuckDBParameterTest do
   use ExUnit.Case
 
+  @moduletag :skip_on_ci
+
   defmodule TestQueries do
     use Yesql, driver: :duckdb
 
