@@ -19,7 +19,17 @@ defmodule BatchTest do
             port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
           )
 
-        # テーブルはマイグレーションで作成されるため、ここでは作成しない
+        # CI環境またはテーブルが存在しない場合は作成
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS batch_test (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255),
+          value INTEGER,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        
+        Postgrex.query!(conn, create_table_sql, [])
 
         [conn: conn, driver: :postgrex]
 
