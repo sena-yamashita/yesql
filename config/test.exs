@@ -42,7 +42,9 @@ config :yesql, Yesql.TestRepo.MSSQL,
   port: String.to_integer(System.get_env("MSSQL_PORT", "1433")),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10,
-  priv: "priv/repo"
+  priv: "priv/repo",
+  # CI環境での自己署名証明書に対応
+  trust_server_certificate: true
 
 # アプリケーション設定
 # 環境変数に基づいて必要なリポジトリのみを設定

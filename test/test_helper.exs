@@ -276,7 +276,9 @@ defmodule TestHelper do
       username: System.get_env("MSSQL_USER", "sa"),
       password: System.get_env("MSSQL_PASSWORD", "YourStrong@Passw0rd"),
       database: "master",
-      port: String.to_integer(System.get_env("MSSQL_PORT", "1433"))
+      port: String.to_integer(System.get_env("MSSQL_PORT", "1433")),
+      # CI環境での自己署名証明書に対応
+      trust_server_certificate: true
     ]
 
     case Tds.start_link(setup_opts) do
@@ -300,7 +302,9 @@ defmodule TestHelper do
           password: System.get_env("MSSQL_PASSWORD", "YourStrong@Passw0rd"),
           database: System.get_env("MSSQL_DATABASE", "yesql_test"),
           port: String.to_integer(System.get_env("MSSQL_PORT", "1433")),
-          name: Module.concat(ctx.module, MSSQL)
+          name: Module.concat(ctx.module, MSSQL),
+          # CI環境での自己署名証明書に対応
+          trust_server_certificate: true
         ]
 
         case Tds.start_link(opts) do
