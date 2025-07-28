@@ -77,7 +77,7 @@ defmodule YesqlOracleTest do
 
   describe "Oracleドライバー" do
     @describetag :skip_on_ci
-    
+
     test "名前でユーザーを検索", %{conn: conn} do
       {:ok, users} = Queries.select_users_by_name(conn, name: "Alice")
 

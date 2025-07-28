@@ -115,7 +115,7 @@ defmodule DriverCastSyntaxTest do
 
         :skip ->
           {:ok, skip: true}
-        
+
         _ ->
           {:ok, skip: true}
       end
