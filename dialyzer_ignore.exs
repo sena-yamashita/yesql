@@ -6,14 +6,14 @@
   {~r/\/leexinc\.hrl$/, :pattern_match},
   {"src/Elixir.Yesql.Tokenizer.erl", :_},
   
-  # DuckDBドライバーの特殊なパターン
-  {"lib/yesql/driver/duckdb.ex", :unmatched_return},
-  
   # DateTimeのパターンマッチ（Elixirバージョン間の違い）
   {"lib/yesql/driver/tds.ex", :pattern_match},
   {"lib/yesql/driver/mysql.ex", :pattern_match},
   {"lib/yesql/driver/mssql.ex", :pattern_match},
   {"lib/yesql/driver/duckdb.ex", :pattern_match},
+  
+  # DuckDBドライバーの特殊なパターン
+  {"lib/yesql/driver/duckdb.ex", :unmatched_return},
   
   # ストリーミング実装のパターンマッチ
   {"lib/yesql/stream.ex", :guard_fail},
@@ -36,12 +36,22 @@
   {"lib/yesql/test_setup.ex", :unknown_function},
   {"lib/yesql/ecto_test_helper.ex", :unknown_function},
   
+  # Mix関数（開発環境でのみ使用）
+  {"lib/yesql/test_setup.ex", :unknown_function, ["Mix.env/0", "Mix.env/1", "Mix.Project.build_path/0"]},
+  {"lib/yesql/ecto_test_helper.ex", :unknown_function, ["Mix.env/0", "Mix.env/1", "Mix.shell/0"]},
+  
   # Decimalライブラリ（オプショナル）
-  {"lib/yesql/driver/tds.ex", :unknown_function},
+  {"lib/yesql/driver/tds.ex", :unknown_function, ["Decimal.to_string/1"]},
   
-  # 無名関数の例外（エラーハンドリング）
-  {~r/lib\/yesql\/.+\.ex$/, :only_terminates_with_explicit_exception},
+  # パターンマッチのカバレッジ警告（ドライバー固有）
+  {"lib/yesql/driver_factory.ex", :pattern_match_cov},
+  {"lib/yesql/stream.ex", :pattern_match_cov},
   
-  # パターンマッチのカバレッジ警告
-  {~r/lib\/yesql\/.+\.ex$/, :pattern_match_cov}
+  # 無名関数の例外（エラーハンドリング - ストリーミング）
+  {"lib/yesql/stream.ex", :only_terminates_with_explicit_exception},
+  {"lib/yesql/driver/postgrex.ex", :only_terminates_with_explicit_exception},
+  {"lib/yesql/driver/mysql.ex", :only_terminates_with_explicit_exception},
+  {"lib/yesql/driver/mssql.ex", :only_terminates_with_explicit_exception},
+  {"lib/yesql/driver/sqlite.ex", :only_terminates_with_explicit_exception},
+  {"lib/yesql/driver/duckdb.ex", :only_terminates_with_explicit_exception}
 ]
