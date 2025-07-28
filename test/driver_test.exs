@@ -2,10 +2,28 @@ defmodule Yesql.DriverTest do
   use ExUnit.Case
   import TestHelper
 
-  setup_all [:new_postgrex_connection, :create_cats_postgres_table]
-  setup [:truncate_postgres_cats]
+  setup_all do
+    case System.get_env("DUCKDB_TEST") do
+      "true" ->
+        # DuckDBテスト環境では、PostgreSQL接続は不要
+        :ok
+      _ ->
+        # 通常のテスト環境では、PostgreSQL接続を作成
+        {:ok, postgrex} = new_postgrex_connection([])
+        create_cats_postgres_table(%{postgrex: postgrex})
+        {:ok, postgrex: postgrex}
+    end
+  end
+
+  setup context do
+    if Map.has_key?(context, :postgrex) do
+      truncate_postgres_cats(context)
+    end
+    :ok
+  end
 
   describe "Postgrexドライバー" do
+    @describetag :postgres
     test "execute/4の動作", %{postgrex: conn} do
       driver = %Yesql.Driver.Postgrex{}
       sql = "INSERT INTO cats (age, name) VALUES ($1, $2)"

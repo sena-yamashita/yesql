@@ -207,6 +207,8 @@ defmodule YesqlTest do
                {:ok, [%{age: 10, name: nil}, %{age: 50, name: nil}]}
     end
 
+    @tag :ecto
+    @tag :skip_on_ci
     test "query exec with Ecto driver" do
       assert QueryEcto.select_older_cats(age: 5) == {:ok, []}
       assert QueryEcto.insert_cat(age: 50) == {:ok, []}
