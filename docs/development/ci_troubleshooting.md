@@ -208,6 +208,41 @@ ecto_repos =
   end
 ```
 
+### 6. config/config.exsとconfig/test.exsの不整合
+
+**問題**
+```
+missing the :database key in options for Yesql.TestRepo.Postgres
+```
+
+**原因**
+- config/config.exsがYesqlTest.Repoを設定
+- config/test.exsがYesql.TestRepo.Postgresを設定
+- 設定名の不一致
+
+**対応**
+config/config.exsを修正:
+```elixir
+import Config
+
+# テスト環境の設定はconfig/test.exsで管理
+if Mix.env() == :test do
+  import_config "test.exs"
+end
+```
+
+### 7. make test-allでのマイグレーションエラー
+
+**問題**
+- MySQL: `CREATE INDEX IF NOT EXISTS`がサポートされない
+- MySQL: 既存テーブルに`email`カラムがない
+- MSSQL: `CREATE INDEX IF NOT EXISTS`がサポートされない
+
+**対応**
+1. インデックス作成を別マイグレーションに分離
+2. 各データベースアダプターごとの条件分岐
+3. MySQLはインデックス作成をスキップ（既存を許容）
+
 ## 今後の改善点
 
 1. CI環境でのテーブル作成処理の統一化
@@ -215,3 +250,4 @@ ecto_repos =
 3. テストの並列実行による高速化
 4. エラーメッセージの改善
 5. 環境変数による制御の文書化
+6. マイグレーションの凪等性を確保
