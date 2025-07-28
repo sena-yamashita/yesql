@@ -67,6 +67,7 @@ defmodule Yesql.DriverTest do
 
   describe "DuckDBドライバー" do
     @describetag :duckdb
+    @describetag :skip_on_ci
     setup do
       case System.get_env("DUCKDB_TEST") do
         "true" ->

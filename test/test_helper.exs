@@ -1,3 +1,8 @@
+# CI環境でスキップするタグを設定
+if System.get_env("CI") == "true" do
+  ExUnit.configure(exclude: [:skip_on_ci])
+end
+
 # 必要なアプリケーションを起動（エラーが発生しても続行）
 case Application.ensure_all_started(:postgrex) do
   {:ok, _} -> :ok

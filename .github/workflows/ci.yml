@@ -58,10 +58,11 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1'"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 30s
 
     steps:
     - uses: actions/checkout@v4
@@ -150,7 +151,7 @@ jobs:
       run: mix deps.get
     
     - name: Compile DuckDBex
-      run: mix deps.compile duckdbex
+      run: mix deps.compile duckdbex --force
     
     - name: Run DuckDB tests
       env:

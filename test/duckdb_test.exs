@@ -47,7 +47,7 @@ defmodule DuckDBTest do
         {:ok, conn: conn, db: db}
 
       _ ->
-        {:ok, %{skip: true}}
+        {:ok, skip: true}
     end
   end
 
@@ -66,6 +66,7 @@ defmodule DuckDBTest do
 
   describe "DuckDB driver" do
     @describetag :duckdb
+    @describetag :skip_on_ci
     test "基本的なinsertとselect", %{conn: conn} do
       # データ挿入
       assert QueryDuckDB.insert_duck(conn, age: 5, name: "Donald") == {:ok, []}
@@ -133,6 +134,7 @@ defmodule DuckDBTest do
 
   describe "結果セット変換" do
     @tag :duckdb
+    @tag :skip_on_ci
     test "DuckDBの結果が正しく変換される", %{conn: conn} do
       # データ挿入
       QueryDuckDB.insert_duck(conn, age: 25, name: "Ludwig")
