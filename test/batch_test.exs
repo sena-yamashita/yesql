@@ -133,11 +133,16 @@ defmodule BatchTest do
 
   describe "名前付きバッチクエリ" do
     test "名前付きクエリの実行", %{conn: conn, driver: driver} do
-      named_queries = %{
+      # まずINSERTクエリを実行
+      insert_queries = [
         insert_alice: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Alice", 100]},
-        insert_bob: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Bob", 200]},
+        insert_bob: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Bob", 200]}
+      ]
+      
+      # 次にCOUNTクエリ（後で実行する）
+      count_query = [
         count_all: {"SELECT COUNT(*) as count FROM batch_test", []}
-      }
+      ]
 
       # CI環境ではトランザクションを無効にする
       transaction_opt = if System.get_env("CI"), do: false, else: true
@@ -147,17 +152,20 @@ defmodule BatchTest do
         IO.puts("\n=== BatchTest Debug Info ===")
         IO.puts("CI: #{System.get_env("CI")}")
         IO.puts("Transaction opt: #{transaction_opt}")
-        IO.puts("Named queries: #{inspect(named_queries)}")
-
+        
         # バッチ実行前のテーブル状態
         {:ok, before_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
         IO.puts("Records before batch: #{inspect(before_count.rows)}")
+        
+        # 統合したクエリリストでデバッグ
+        all_queries = insert_queries ++ count_query
+        IO.puts("Named queries: #{inspect(all_queries)}")
 
         # 各クエリを個別に実行してデバッグ（トランザクション内でロールバック）
         IO.puts("\n=== Individual query execution (will rollback) ===")
         Postgrex.query!(conn, "BEGIN", [])
 
-        Enum.each(Map.to_list(named_queries), fn {name, {query, params}} ->
+        Enum.each(all_queries, fn {name, {query, params}} ->
           IO.puts("\nExecuting #{name}: #{query}")
           IO.puts("Params: #{inspect(params)}")
 
@@ -190,13 +198,24 @@ defmodule BatchTest do
         IO.puts("=== End Individual execution ===")
       end
 
-      # バッチ実行
-      {:ok, results} =
-        Batch.execute_named(named_queries,
+      # INSERTクエリを実行
+      {:ok, insert_results} =
+        Batch.execute_named(insert_queries,
           driver: driver,
           conn: conn,
           transaction: transaction_opt
         )
+        
+      # COUNTクエリを実行
+      {:ok, count_results} =
+        Batch.execute_named(count_query,
+          driver: driver,
+          conn: conn,
+          transaction: false  # カウントはトランザクション不要
+        )
+      
+      # 結果を統合
+      results = Map.merge(insert_results, count_results)
 
       # デバッグ用出力
       if System.get_env("CI") || System.get_env("DEBUG_BATCH_TEST") do
@@ -213,7 +232,9 @@ defmodule BatchTest do
         IO.puts("=== End Debug Info ===")
       end
 
-      # 結果にアクセス
+      # 結果を検証
+      assert results.insert_alice == []
+      assert results.insert_bob == []
       assert results.count_all == [%{count: 2}]
     end
 

@@ -58,7 +58,7 @@ defmodule Yesql.Batch do
 
   ## パラメータ
 
-    * `named_queries` - 名前付きクエリのマップ
+    * `named_queries` - 名前付きクエリのマップまたはキーワードリスト
     * `opts` - オプション（`execute/2`と同じ）
 
   ## 戻り値
@@ -68,11 +68,19 @@ defmodule Yesql.Batch do
 
   ## 例
 
+      # マップ形式（順序は保証されない）
       named_queries = %{
         create_user: {"INSERT INTO users (name) VALUES ($1) RETURNING id", ["Alice"]},
         create_profile: {"INSERT INTO profiles (user_id, bio) VALUES ($1, $2)", [1, "Bio"]},
         update_stats: {"UPDATE stats SET user_count = user_count + 1", []}
       }
+      
+      # キーワードリスト形式（順序が保証される）
+      named_queries = [
+        create_user: {"INSERT INTO users (name) VALUES ($1) RETURNING id", ["Alice"]},
+        create_profile: {"INSERT INTO profiles (user_id, bio) VALUES ($1, $2)", [1, "Bio"]},
+        update_stats: {"UPDATE stats SET user_count = user_count + 1", []}
+      ]
       
       {:ok, results} = Yesql.Batch.execute_named(named_queries,
         driver: :postgrex,
@@ -81,9 +89,36 @@ defmodule Yesql.Batch do
       
       user_id = results.create_user |> hd() |> Map.get(:id)
   """
+  def execute_named(named_queries, opts) when is_list(named_queries) do
+    # キーワードリストの場合、順序を保持
+    names = Keyword.keys(named_queries)
+    queries = Keyword.values(named_queries)
+    
+    case execute(queries, opts) do
+      {:ok, results} ->
+        # 結果を名前付きマップに変換
+        results_map =
+          names
+          |> Enum.zip(results)
+          |> Enum.into(%{})
+
+        {:ok, results_map}
+
+      {:error, reason, partial_results} ->
+        # 部分的な結果も名前付きマップに変換
+        partial_map =
+          names
+          |> Enum.take(length(partial_results))
+          |> Enum.zip(partial_results)
+          |> Enum.into(%{})
+
+        {:error, reason, partial_map}
+    end
+  end
+  
   def execute_named(named_queries, opts) when is_map(named_queries) do
-    # 名前とクエリを分離
-    names = Map.keys(named_queries)
+    # マップの場合、キーをソートして一貫した順序を保証
+    names = Map.keys(named_queries) |> Enum.sort()
     queries = Enum.map(names, &Map.get(named_queries, &1))
 
     case execute(queries, opts) do
