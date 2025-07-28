@@ -141,7 +141,27 @@ defmodule BatchTest do
 
       # CI環境ではトランザクションを無効にする
       transaction_opt = if System.get_env("CI"), do: false, else: true
-      {:ok, results} = Batch.execute_named(named_queries, driver: driver, conn: conn, transaction: transaction_opt)
+
+      # デバッグ用出力
+      if System.get_env("CI") do
+        IO.puts("CI環境でのBatchTest実行: transaction = #{transaction_opt}")
+      end
+
+      {:ok, results} =
+        Batch.execute_named(named_queries,
+          driver: driver,
+          conn: conn,
+          transaction: transaction_opt
+        )
+
+      # デバッグ用出力
+      if System.get_env("CI") do
+        IO.inspect(results, label: "CI環境でのBatch実行結果")
+
+        # 直接カウントを確認
+        {:ok, direct_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+        IO.inspect(direct_count.rows, label: "直接クエリでのカウント")
+      end
 
       # 結果にアクセス
       assert results.count_all == [%{count: 2}]
