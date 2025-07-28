@@ -143,10 +143,37 @@ defmodule BatchTest do
       transaction_opt = if System.get_env("CI"), do: false, else: true
 
       # デバッグ用出力
-      if System.get_env("CI") do
-        IO.puts("CI環境でのBatchTest実行: transaction = #{transaction_opt}")
+      if System.get_env("CI") || System.get_env("DEBUG_BATCH_TEST") do
+        IO.puts("\n=== BatchTest Debug Info ===")
+        IO.puts("CI: #{System.get_env("CI")}")
+        IO.puts("Transaction opt: #{transaction_opt}")
+        IO.puts("Named queries: #{inspect(named_queries)}")
+
+        # バッチ実行前のテーブル状態
+        {:ok, before_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+        IO.puts("Records before batch: #{inspect(before_count.rows)}")
+
+        # 各クエリを個別に実行してデバッグ
+        IO.puts("\n=== Individual query execution ===")
+        Enum.each(Map.to_list(named_queries), fn {name, {query, params}} ->
+          IO.puts("\nExecuting #{name}: #{query}")
+          IO.puts("Params: #{inspect(params)}")
+
+          case Postgrex.query(conn, query, params) do
+            {:ok, result} ->
+              IO.puts("Success: rows_affected=#{result.num_rows}")
+            {:error, error} ->
+              IO.puts("Error: #{inspect(error)}")
+          end
+        end)
+
+        # 個別実行後のカウント
+        {:ok, after_individual} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+        IO.puts("\nRecords after individual queries: #{inspect(after_individual.rows)}")
+        IO.puts("=== End Individual execution ===")
       end
 
+      # バッチ実行
       {:ok, results} =
         Batch.execute_named(named_queries,
           driver: driver,
@@ -155,12 +182,18 @@ defmodule BatchTest do
         )
 
       # デバッグ用出力
-      if System.get_env("CI") do
-        IO.inspect(results, label: "CI環境でのBatch実行結果")
+      if System.get_env("CI") || System.get_env("DEBUG_BATCH_TEST") do
+        IO.puts("\n=== Batch execution results ===")
+        IO.inspect(results, label: "Batch results")
 
-        # 直接カウントを確認
-        {:ok, direct_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
-        IO.inspect(direct_count.rows, label: "直接クエリでのカウント")
+        # バッチ実行後のカウント
+        {:ok, batch_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+        IO.puts("Records after batch: #{inspect(batch_count.rows)}")
+
+        # 全レコードを表示
+        {:ok, all_records} = Postgrex.query(conn, "SELECT * FROM batch_test", [])
+        IO.puts("All records: #{inspect(all_records.rows)}")
+        IO.puts("=== End Debug Info ===")
       end
 
       # 結果にアクセス

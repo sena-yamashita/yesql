@@ -1,0 +1,120 @@
+name: BatchTest Debug
+on: 
+  workflow_dispatch:
+    inputs:
+      debug_level:
+        description: 'Debug level'
+        required: false
+        default: 'verbose'
+        type: choice
+        options:
+          - minimal
+          - verbose
+          - trace
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: yesql_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18.4'
+          otp-version: '27.2.1'
+
+      - name: Install dependencies
+        run: |
+          mix deps.get
+          mix compile
+
+      - name: Setup test database
+        env:
+          MIX_ENV: test
+          POSTGRES_HOST: localhost
+        run: |
+          # データベース接続確認
+          psql -h localhost -U postgres -d yesql_test -c "SELECT version();"
+          
+          # マイグレーション実行
+          mix ecto.create
+          mix ecto.migrate
+          
+          # テーブル存在確認
+          psql -h localhost -U postgres -d yesql_test -c "\dt"
+
+      - name: Run individual INSERT test
+        env:
+          CI: true
+          MIX_ENV: test
+          POSTGRES_HOST: localhost
+        run: |
+          echo "=== Direct SQL Test ==="
+          psql -h localhost -U postgres -d yesql_test << EOF
+          -- テーブルクリア
+          DELETE FROM batch_test;
+          
+          -- 直接INSERT
+          INSERT INTO batch_test (name, value) VALUES ('DirectTest1', 100);
+          INSERT INTO batch_test (name, value) VALUES ('DirectTest2', 200);
+          
+          -- カウント確認
+          SELECT COUNT(*) as count FROM batch_test;
+          SELECT * FROM batch_test;
+          EOF
+
+      - name: Run BatchTest with maximum debug
+        env:
+          CI: true
+          DEBUG_BATCH_TEST: true
+          MIX_ENV: test
+          POSTGRES_HOST: localhost
+          DEBUG_LEVEL: ${{ inputs.debug_level }}
+        run: |
+          echo "=== BatchTest Execution with Debug Level: $DEBUG_LEVEL ==="
+          
+          # Yesql.Batchモジュールのソースを表示
+          echo "=== Yesql.Batch source ==="
+          cat lib/yesql/batch.ex || echo "Batch module not found"
+          
+          # テスト実行
+          mix test test/batch_test.exs:135 --trace --seed 0
+          
+          # テスト後のテーブル状態確認
+          echo "=== Table state after test ==="
+          psql -h localhost -U postgres -d yesql_test -c "SELECT * FROM batch_test;"
+
+      - name: Run simpler batch test
+        env:
+          CI: true
+          MIX_ENV: test
+          POSTGRES_HOST: localhost
+        run: |
+          echo "=== Simpler Batch Test ==="
+          
+          # より単純なバッチテストを実行
+          mix test test/batch_test.exs:45 --trace
+
+      - name: Check Batch module implementation
+        run: |
+          echo "=== Checking Batch.execute_named implementation ==="
+          grep -n "execute_named" lib/yesql/batch.ex || echo "execute_named not found"
+          
+          echo "=== Checking transaction handling ==="
+          grep -n "transaction" lib/yesql/batch.ex || echo "transaction handling not found"

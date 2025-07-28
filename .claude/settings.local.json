@@ -128,7 +128,10 @@
       "Bash(CI=true FULL_TEST=true MIX_ENV=test iex -S mix)",
       "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres))\")",
       "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_all_env(:yesql))\")",
-      "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres), label: \"\"Postgres config\"\")\")"
+      "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres), label: \"\"Postgres config\"\")\")",
+      "Bash(gh workflow view:*)",
+      "Bash(mix format:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }
