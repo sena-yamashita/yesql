@@ -1,6 +1,6 @@
 # Yesql
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/sena-yamashita/yesql)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/sena-yamashita/yesql)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
 YesqlはSQLを_使用する_ためのElixirライブラリです。
