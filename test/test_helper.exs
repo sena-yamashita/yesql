@@ -35,8 +35,8 @@ end
 
 # CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
 if System.get_env("CI") || System.get_env("FULL_TEST") do
-  # CI環境でEctoマイグレーションを実行
-  if System.get_env("CI") do
+  # CI環境でEctoマイグレーションを実行（DuckDBテスト時は除く）
+  if System.get_env("CI") && System.get_env("DUCKDB_TEST") != "true" do
     # Ectoアプリケーションを起動
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
     

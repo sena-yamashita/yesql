@@ -164,9 +164,29 @@ gh run view <run_id> --log-failed | grep -E "##\[error\]|failed|Failed"
    - 環境変数の設定を確認する
    - Dockerコンテナのヘルスチェックを適切に設定する
 
+### 5. DuckDBテスト環境でのPostgreSQL接続エラー
+
+**問題**
+```
+failed to connect: ** (ArgumentError) missing the :database key in options for Yesql.TestRepo.Postgres
+```
+
+**原因**
+- test_helper.exsで追加したPostgreSQLマイグレーションがDuckDBテスト環境でも実行される
+- DuckDBテストではPostgreSQLは不要
+
+**対応**
+DuckDBテスト時はマイグレーションをスキップ：
+```elixir
+if System.get_env("CI") && System.get_env("DUCKDB_TEST") != "true" do
+  # DuckDBテスト以外の場合のみマイグレーション実行
+end
+```
+
 ## 今後の改善点
 
 1. CI環境でのテーブル作成処理の統一化
 2. Dialyzer警告の根本的な解決
 3. テストの並列実行による高速化
 4. エラーメッセージの改善
+5. 環境変数による制御の文書化
