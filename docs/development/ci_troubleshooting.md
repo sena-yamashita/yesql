@@ -164,7 +164,7 @@ gh run view <run_id> --log-failed | grep -E "##\[error\]|failed|Failed"
    - 環境変数の設定を確認する
    - Dockerコンテナのヘルスチェックを適切に設定する
 
-### 5. DuckDBテスト環境でのPostgreSQL接続エラー
+### 5. DuckDB/SQLiteテスト環境でのPostgreSQL接続エラー
 
 **問題**
 ```
@@ -172,15 +172,40 @@ failed to connect: ** (ArgumentError) missing the :database key in options for Y
 ```
 
 **原因**
-- test_helper.exsで追加したPostgreSQLマイグレーションがDuckDBテスト環境でも実行される
-- DuckDBテストではPostgreSQLは不要
+- test_helper.exsですべてのテストでPostgreSQLリポジトリを起動
+- config/test.exsで`ecto_repos`にすべてのリポジトリが登録
+- SQLiteとDuckDBは直接接続するため、Ectoリポジトリは不要
 
 **対応**
-DuckDBテスト時はマイグレーションをスキップ：
+環境変数に基づいて必要なリポジトリのみを起動：
+
+1. **test_helper.exs**
 ```elixir
-if System.get_env("CI") && System.get_env("DUCKDB_TEST") != "true" do
-  # DuckDBテスト以外の場合のみマイグレーション実行
+sqlite_test = System.get_env("SQLITE_TEST") == "true"
+duckdb_test = System.get_env("DUCKDB_TEST") == "true"
+mysql_test = System.get_env("MYSQL_TEST") == "true"
+mssql_test = System.get_env("MSSQL_TEST") == "true"
+
+# 各ドライバーに応じたリポジトリのみ起動
+if mysql_test do
+  Yesql.TestRepo.MySQL.start_link()
+elsif mssql_test do
+  Yesql.TestRepo.MSSQL.start_link()
+elsif !sqlite_test && !duckdb_test do
+  Yesql.TestRepo.Postgres.start_link()  # デフォルト
 end
+```
+
+2. **config/test.exs**
+```elixir
+ecto_repos = 
+  cond do
+    System.get_env("SQLITE_TEST") == "true" -> []
+    System.get_env("DUCKDB_TEST") == "true" -> []
+    System.get_env("MYSQL_TEST") == "true" -> [Yesql.TestRepo.MySQL]
+    System.get_env("MSSQL_TEST") == "true" -> [Yesql.TestRepo.MSSQL]
+    true -> [Yesql.TestRepo.Postgres]
+  end
 ```
 
 ## 今後の改善点

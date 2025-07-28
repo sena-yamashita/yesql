@@ -45,8 +45,17 @@ config :yesql, Yesql.TestRepo.MSSQL,
   priv: "priv/repo"
 
 # アプリケーション設定
-config :yesql,
-  ecto_repos: [Yesql.TestRepo.Postgres, Yesql.TestRepo.MySQL, Yesql.TestRepo.MSSQL]
+# 環境変数に基づいて必要なリポジトリのみを設定
+ecto_repos = 
+  cond do
+    System.get_env("SQLITE_TEST") == "true" -> []
+    System.get_env("DUCKDB_TEST") == "true" -> []
+    System.get_env("MYSQL_TEST") == "true" -> [Yesql.TestRepo.MySQL]
+    System.get_env("MSSQL_TEST") == "true" -> [Yesql.TestRepo.MSSQL]
+    true -> [Yesql.TestRepo.Postgres]  # デフォルト
+  end
+
+config :yesql, ecto_repos: ecto_repos
 
 # ログレベルの設定
 config :logger, level: :info
