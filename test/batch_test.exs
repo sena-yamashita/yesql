@@ -156,7 +156,7 @@ defmodule BatchTest do
         # 各クエリを個別に実行してデバッグ（トランザクション内でロールバック）
         IO.puts("\n=== Individual query execution (will rollback) ===")
         Postgrex.query!(conn, "BEGIN", [])
-        
+
         Enum.each(Map.to_list(named_queries), fn {name, {query, params}} ->
           IO.puts("\nExecuting #{name}: #{query}")
           IO.puts("Params: #{inspect(params)}")
@@ -164,9 +164,11 @@ defmodule BatchTest do
           case Postgrex.query(conn, query, params) do
             {:ok, result} ->
               IO.puts("Success: rows_affected=#{result.num_rows}")
+
               if name == :count_all do
                 IO.puts("Count result: #{inspect(result.rows)}")
               end
+
             {:error, error} ->
               IO.puts("Error: #{inspect(error)}")
           end
@@ -175,13 +177,15 @@ defmodule BatchTest do
         # トランザクション内のカウント
         {:ok, tx_count} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
         IO.puts("\nRecords in transaction: #{inspect(tx_count.rows)}")
-        
+
         # ロールバック
         Postgrex.query!(conn, "ROLLBACK", [])
         IO.puts("Rolled back debug transaction")
-        
+
         # ロールバック後のカウント
-        {:ok, after_rollback} = Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+        {:ok, after_rollback} =
+          Postgrex.query(conn, "SELECT COUNT(*) as count FROM batch_test", [])
+
         IO.puts("Records after rollback: #{inspect(after_rollback.rows)}")
         IO.puts("=== End Individual execution ===")
       end

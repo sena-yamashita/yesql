@@ -133,7 +133,9 @@
       "Bash(mix format:*)",
       "Bash(git reset:*)",
       "Bash(./scripts/setup-local-ci.sh:*)",
-      "Bash(CI=true DEBUG_BATCH_TEST=true mix test test/batch_test.exs:135 --trace)"
+      "Bash(CI=true DEBUG_BATCH_TEST=true mix test test/batch_test.exs:135 --trace)",
+      "Bash(act:*)",
+      "Bash(./scripts/pre-push-check.sh:*)"
     ],
     "deny": []
   }
