@@ -71,8 +71,8 @@ POSTGRES_PORT=5432
 EOF
 ```
 
-### 3. カスタムワークフローでBatchTestをデバッグ
-`.github/workflows/batch-test-debug.yml`を作成：
+### 3. act専用ワークフローの使用
+act専用のワークフローは`.act/workflows/`に配置：
 ```yaml
 name: BatchTest Debug
 on: [workflow_dispatch]
@@ -121,8 +121,11 @@ jobs:
 
 ### 4. ローカルでの実行
 ```bash
-# BatchTestデバッグワークフローを実行
-act -W .github/workflows/batch-test-debug.yml
+# act専用ワークフローを実行
+act -W .act/workflows/test.yml
+
+# GitHub Actionsのワークフローをローカルで実行
+act -W .github/workflows/ci.yml
 ```
 
 ## BatchTest調査用のデバッグコード追加
