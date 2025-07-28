@@ -315,8 +315,12 @@ Sqlcmd: Error: Microsoft ODBC Driver 18 for SQL Server : SSL Provider: [error:0A
 - ローカル環境では成功するがCI環境でのみ失敗
 
 **対応**
-1. batch_test.exsの該当テストに`@tag :skip_on_ci`を追加
-2. 将来的にはトランザクション処理の改善が必要
+1. ~~batch_test.exsの該当テストに`@tag :skip_on_ci`を追加~~
+2. CI環境でのみトランザクションを無効化するように変更
+   ```elixir
+   transaction_opt = if System.get_env("CI"), do: false, else: true
+   ```
+3. 将来的にはトランザクション処理の改善が必要
 
 ## 今後の改善点
 

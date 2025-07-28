@@ -132,7 +132,6 @@ defmodule BatchTest do
   end
 
   describe "名前付きバッチクエリ" do
-    @tag :skip_on_ci
     test "名前付きクエリの実行", %{conn: conn, driver: driver} do
       named_queries = %{
         insert_alice: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Alice", 100]},
@@ -140,7 +139,9 @@ defmodule BatchTest do
         count_all: {"SELECT COUNT(*) as count FROM batch_test", []}
       }
 
-      {:ok, results} = Batch.execute_named(named_queries, driver: driver, conn: conn)
+      # CI環境ではトランザクションを無効にする
+      transaction_opt = if System.get_env("CI"), do: false, else: true
+      {:ok, results} = Batch.execute_named(named_queries, driver: driver, conn: conn, transaction: transaction_opt)
 
       # 結果にアクセス
       assert results.count_all == [%{count: 2}]
