@@ -54,6 +54,47 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - ユーザーから明示的にプッシュの指示があった場合のみ実行
 - CI/CDの負荷を考慮し、プッシュのタイミングはユーザーが制御
 
+### デグレード防止（必須）
+コードの品質を保つため、以下のチェックをすべてPASSしてからプッシュしてください：
+
+1. **プッシュ前チェックの実行**
+   ```bash
+   ./scripts/pre-push-check.sh
+   ```
+   
+   このスクリプトは以下を自動チェック：
+   - コードフォーマット（mix format --check-formatted）
+   - コンパイル（mix compile --warnings-as-errors）
+   - ローカルテスト（make test-all）
+   - ローカルCI（act）※オプション
+   - Dialyzer ※オプション
+
+2. **Gitフックの設定（推奨）**
+   ```bash
+   ./scripts/setup-git-hooks.sh
+   ```
+   
+   これにより、git push時に自動的にチェックが実行されます。
+
+3. **チェックをスキップする場合（非推奨）**
+   ```bash
+   git push origin main --no-verify
+   ```
+   
+   ただし、デグレードのリスクがあるため推奨しません。
+
+4. **ローカルCI環境でのテスト**
+   actがインストールされている場合、GitHub Actionsと同じ環境でテスト可能：
+   ```bash
+   # 軽量イメージでElixir CIを実行
+   act -W .github/workflows/elixir.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+   ```
+
+**注意事項**:
+- すべてのチェックがPASSしない限り、プッシュは避けてください
+- 特に`make test-all`は必須です（ローカル環境でのテスト）
+- CI環境特有の問題がある場合は、actを使用して事前に検証
+
 ## 作業管理
 
 ### ToDo.md更新ルール

@@ -1,0 +1,8 @@
+#!/bin/bash
+# Git pre-pushフック - デグレード防止チェック
+
+# scripts/pre-push-check.shを実行
+./scripts/pre-push-check.sh
+
+# 結果をそのまま返す
+exit $?
