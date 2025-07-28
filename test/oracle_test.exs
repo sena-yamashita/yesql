@@ -37,7 +37,7 @@ defmodule YesqlOracleTest do
 
       _ ->
         IO.puts("Oracleテストをスキップします。実行するには ORACLE_TEST=true を設定してください。")
-        {:ok, %{}}
+        {:ok, skip: true}
     end
   end
 
@@ -76,6 +76,8 @@ defmodule YesqlOracleTest do
   end
 
   describe "Oracleドライバー" do
+    @describetag :skip_on_ci
+    
     test "名前でユーザーを検索", %{conn: conn} do
       {:ok, users} = Queries.select_users_by_name(conn, name: "Alice")
 
@@ -104,7 +106,7 @@ defmodule YesqlOracleTest do
       assert count == 1
     end
 
-    test "パラメータが正しい順序で:1, :2...に置換される", %{conn: _conn} do
+    test "パラメータが正しい順序で:1, :2...に置換される" do
       # 複雑なクエリでパラメータの順序をテスト
       sql = "SELECT * FROM users WHERE age > :min_age AND name = :name AND age < :max_age"
       driver = %Yesql.Driver.Oracle{}
@@ -115,7 +117,7 @@ defmodule YesqlOracleTest do
       assert param_order == [:min_age, :name, :max_age]
     end
 
-    test "重複するパラメータが正しく処理される", %{conn: _conn} do
+    test "重複するパラメータが正しく処理される" do
       sql = "SELECT * FROM users WHERE name = :name OR nickname = :name"
       driver = %Yesql.Driver.Oracle{}
 

@@ -7,17 +7,19 @@ defmodule Yesql.DriverTest do
       "true" ->
         # DuckDBテスト環境では、PostgreSQL接続は不要
         :ok
+
       _ ->
         # 通常のテスト環境では、PostgreSQL接続を作成
         context = %{module: __MODULE__}
+
         case new_postgrex_connection(context) do
           {:ok, context_with_conn} ->
             create_cats_postgres_table(context_with_conn)
             {:ok, context_with_conn}
-          
+
           :skip ->
             {:ok, skip: true}
-          
+
           {:error, _} ->
             {:ok, skip: true}
         end
@@ -28,6 +30,7 @@ defmodule Yesql.DriverTest do
     if Map.has_key?(context, :postgrex) do
       truncate_postgres_cats(context)
     end
+
     :ok
   end
 

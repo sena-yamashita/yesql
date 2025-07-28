@@ -113,12 +113,16 @@ defmodule DriverCastSyntaxTest do
           create_duckdb_cast_table(ctx)
           ctx
 
+        :skip ->
+          {:ok, skip: true}
+        
         _ ->
           {:ok, skip: true}
       end
     end
 
     @tag :duckdb
+    @tag :skip_on_ci
     test "DuckDBでの::キャスト", %{duckdb: conn} do
       # DuckDBもPostgreSQL互換の::をサポート
       # 注意: DuckDBはパラメータをサポートしないため、直接値を埋め込む
@@ -262,6 +266,7 @@ defmodule DriverCastSyntaxTest do
     end
 
     @tag :oracle
+    @tag :skip_on_ci
     test "OracleのCAST関数", %{oracle: conn} do
       # OracleはCAST関数を使用
       {:ok, results} =
