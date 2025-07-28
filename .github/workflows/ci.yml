@@ -148,10 +148,13 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-duckdb-
     
     - name: Install dependencies
-      run: mix deps.get
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get
     
-    - name: Compile DuckDBex
-      run: mix deps.compile duckdbex --force
+    - name: Compile all dependencies
+      run: mix deps.compile
     
     - name: Run DuckDB tests
       env:

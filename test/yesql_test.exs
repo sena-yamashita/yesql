@@ -118,9 +118,7 @@ defmodule YesqlTest do
     setup [:truncate_postgres_cats]
 
     test "unknown driver" do
-      assert_raise Yesql.UnknownDriver, "Unknown driver: boopatron\n", fn ->
-        Yesql.DriverFactory.create(:boopatron)
-      end
+      assert {:error, :unknown_driver} = Yesql.DriverFactory.create(:boopatron)
     end
 
     test "Postgrex insert", ctx do
