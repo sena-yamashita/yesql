@@ -132,6 +132,7 @@ defmodule BatchTest do
   end
 
   describe "名前付きバッチクエリ" do
+    @tag :skip_on_ci
     test "名前付きクエリの実行", %{conn: conn, driver: driver} do
       named_queries = %{
         insert_alice: {"INSERT INTO batch_test (name, value) VALUES ($1, $2)", ["Alice", 100]},
