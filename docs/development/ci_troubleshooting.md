@@ -243,6 +243,32 @@ end
 2. 各データベースアダプターごとの条件分岐
 3. MySQLはインデックス作成をスキップ（既存を許容）
 
+### 8. MSSQL証明書エラー
+
+**問題**
+```
+Sqlcmd: Error: Microsoft ODBC Driver 18 for SQL Server : SSL Provider: [error:0A000086:SSL routines::certificate verify failed:self-signed certificate]
+```
+
+**原因**
+- `mssql-tools18`はデフォルトでSSL証明書検証を要求
+- GitHub ActionsのMSSSQLサービスコンテナは自己署名証明書を使用
+- `mssql-tools`から`mssql-tools18`への移行でセキュリティが強化
+
+**対応**
+すべての`sqlcmd`コマンドに`-C`オプションを追加：
+```bash
+# ヘルスチェック
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No -C
+
+# データベース作成
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q "CREATE DATABASE yesql_test" -C
+```
+
+**注意**
+- `-C`オプションはテスト環境のみで使用
+- 本番環境では適切なSSL証明書を使用
+
 ## 今後の改善点
 
 1. CI環境でのテーブル作成処理の統一化
@@ -251,3 +277,4 @@ end
 4. エラーメッセージの改善
 5. 環境変数による制御の文書化
 6. マイグレーションの凪等性を確保
+7. SSL証明書設定の文書化

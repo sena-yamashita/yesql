@@ -192,12 +192,12 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install -y mssql-tools18
         for i in {1..30}; do
-          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No && break
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No -C && break
           echo "Waiting for MSSQL to be ready..."
           sleep 2
         done
         # Create yesql_test database
-        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q "CREATE DATABASE yesql_test" || true
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q "CREATE DATABASE yesql_test" -C || true
     
     - name: Run MSSQL tests
       env:
