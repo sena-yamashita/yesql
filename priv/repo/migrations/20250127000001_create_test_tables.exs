@@ -42,11 +42,7 @@ defmodule Yesql.TestRepo.Migrations.CreateTestTables do
       add :created_at, :utc_datetime, default: fragment("CURRENT_TIMESTAMP")
     end
 
-    # インデックスの作成
-    create_if_not_exists index(:users, [:age])
-    create_if_not_exists index(:users, [:email])
-    create_if_not_exists index(:products, [:category])
-    create_if_not_exists index(:large_data, [:value])
+    # インデックスは別のマイグレーションで作成
   end
 
   def down do

@@ -122,7 +122,13 @@
       "Bash(FULL_TEST=true mix test test/driver_test.exs --trace)",
       "Bash(FULL_TEST=true mix test test/driver_test.exs:32)",
       "Bash(FULL_TEST=true mix test test/driver_test.exs --only postgres)",
-      "Bash(./run-tests.sh:*)"
+      "Bash(./run-tests.sh:*)",
+      "Bash(MIX_ENV=test mix test test/simple_select_test.exs --trace)",
+      "Bash(FULL_TEST=true mix test test/postgresql_test.exs --trace)",
+      "Bash(CI=true FULL_TEST=true MIX_ENV=test iex -S mix)",
+      "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres))\")",
+      "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_all_env(:yesql))\")",
+      "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres), label: \"\"Postgres config\"\")\")"
     ],
     "deny": []
   }

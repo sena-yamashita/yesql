@@ -1,17 +1,6 @@
 import Config
 
-case Mix.env() do
-  :test ->
-    config :yesql, ecto_repos: [YesqlTest.Repo]
-
-    config :yesql, YesqlTest.Repo,
-      username: "postgres",
-      password: "postgres",
-      database: "yesql_test",
-      hostname: "localhost"
-
-    config :logger, level: :info
-
-  _ ->
-    :ok
+# テスト環境の設定はconfig/test.exsで管理
+if Mix.env() == :test do
+  import_config "test.exs"
 end

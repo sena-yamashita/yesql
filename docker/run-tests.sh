@@ -74,13 +74,17 @@ mix deps.get
 echo -e "\n${YELLOW}Compiling project...${NC}"
 MIX_ENV=test mix compile
 
-# Ectoを使ったデータベースセットアップ
-echo -e "\n${YELLOW}Setting up databases with Ecto...${NC}"
-FULL_TEST=true MIX_ENV=test mix run -e "
-Yesql.EctoTestHelper.ensure_database_exists(\"postgres\")
-Yesql.EctoTestHelper.ensure_database_exists(\"mysql\")
-Yesql.EctoTestHelper.ensure_database_exists(\"mssql\")
-"
+# データベースセットアップ
+echo -e "\n${YELLOW}Setting up databases...${NC}"
+
+# PostgreSQL
+docker exec yesql_postgres psql -U postgres -c "CREATE DATABASE yesql_test" 2>/dev/null || echo "PostgreSQL database already exists: yesql_test"
+
+# MySQL  
+docker exec yesql_mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS yesql_test" || echo "Failed to create MySQL database"
+
+# MSSQL
+docker exec yesql_mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'yesql_test') CREATE DATABASE yesql_test" || echo "Failed to create MSSQL database"
 
 # テストの実行
 case "$TEST_TYPE" in
@@ -89,48 +93,48 @@ case "$TEST_TYPE" in
     
     # PostgreSQL and core tests
     echo -e "\n${YELLOW}Running PostgreSQL and core tests...${NC}"
-    POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
+    CI=true FULL_TEST=true POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
     
     # MySQL tests
     echo -e "\n${YELLOW}Running MySQL tests...${NC}"
-    MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
+    CI=true MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
     
     # SQLite tests
     echo -e "\n${YELLOW}Running SQLite tests...${NC}"
-    SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
+    CI=true SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
     
     # MSSQL tests
     echo -e "\n${YELLOW}Running MSSQL tests...${NC}"
-    MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
+    CI=true MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
     
     # DuckDB tests
     echo -e "\n${YELLOW}Running DuckDB tests...${NC}"
-    DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
+    CI=true DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
     ;;
     
   "postgres")
     echo -e "\n${GREEN}Running PostgreSQL tests only...${NC}"
-    POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
+    CI=true FULL_TEST=true POSTGRESQL_STREAM_TEST=true mix test --exclude mysql --exclude duckdb --exclude mssql --exclude oracle --exclude sqlite
     ;;
     
   "mysql")
     echo -e "\n${GREEN}Running MySQL tests only...${NC}"
-    MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
+    CI=true MYSQL_TEST=true MYSQL_STREAM_TEST=true mix test --only mysql
     ;;
     
   "sqlite")
     echo -e "\n${GREEN}Running SQLite tests only...${NC}"
-    SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
+    CI=true SQLITE_TEST=true SQLITE_STREAM_TEST=true mix test --only sqlite
     ;;
     
   "mssql")
     echo -e "\n${GREEN}Running MSSQL tests only...${NC}"
-    MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
+    CI=true MSSQL_TEST=true MSSQL_STREAM_TEST=true mix test --only mssql
     ;;
     
   "duckdb")
     echo -e "\n${GREEN}Running DuckDB tests only...${NC}"
-    DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
+    CI=true DUCKDB_TEST=true DUCKDB_STREAM_TEST=true mix test --only duckdb
     ;;
     
   *)
