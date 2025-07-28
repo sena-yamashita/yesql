@@ -31,4 +31,6 @@ docker/data/
 .claude/
 
 # act tool for local CI
-.act/
+# シークレットと環境変数のみ無視
+.act/secrets
+.act/env
