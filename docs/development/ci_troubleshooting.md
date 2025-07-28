@@ -269,6 +269,23 @@ Sqlcmd: Error: Microsoft ODBC Driver 18 for SQL Server : SSL Provider: [error:0A
 - `-C`オプションはテスト環境のみで使用
 - 本番環境では適切なSSL証明書を使用
 
+### 9. trust_server_certificate設定追加後のCI失敗
+
+**問題**
+- コードフォーマットエラー
+- MSSQLデータベース接続エラー（yesql_testが存在しない）
+- DuckDBパラメータエラー
+
+**原因**
+- ci.ymlにMSSQLデータベース作成ステップが欠如
+- elixir.ymlのMSSQLパスワードが不一致（@ vs !）
+- コードフォーマッタ規約違反
+
+**対応**
+1. ci.ymlにMSSQLデータベース作成ステップを追加
+2. elixir.ymlのパスワードを統一（YourStrong@Passw0rd）
+3. `mix format`でコードフォーマットを修正
+
 ## 今後の改善点
 
 1. CI環境でのテーブル作成処理の統一化
@@ -278,3 +295,4 @@ Sqlcmd: Error: Microsoft ODBC Driver 18 for SQL Server : SSL Provider: [error:0A
 5. 環境変数による制御の文書化
 6. マイグレーションの凪等性を確保
 7. SSL証明書設定の文書化
+8. 全CIワークフローの設定統一

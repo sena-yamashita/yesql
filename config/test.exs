@@ -48,13 +48,14 @@ config :yesql, Yesql.TestRepo.MSSQL,
 
 # アプリケーション設定
 # 環境変数に基づいて必要なリポジトリのみを設定
-ecto_repos = 
+ecto_repos =
   cond do
     System.get_env("SQLITE_TEST") == "true" -> []
     System.get_env("DUCKDB_TEST") == "true" -> []
     System.get_env("MYSQL_TEST") == "true" -> [Yesql.TestRepo.MySQL]
     System.get_env("MSSQL_TEST") == "true" -> [Yesql.TestRepo.MSSQL]
-    true -> [Yesql.TestRepo.Postgres]  # デフォルト
+    # デフォルト
+    true -> [Yesql.TestRepo.Postgres]
   end
 
 config :yesql, ecto_repos: ecto_repos

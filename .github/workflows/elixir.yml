@@ -54,7 +54,7 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: YourStrong!Passw0rd
+          SA_PASSWORD: YourStrong@Passw0rd
           MSSQL_PID: Express
         ports:
           - 1433:1433
@@ -100,7 +100,7 @@ jobs:
     - name: Setup MSSQL database
       run: |
         sleep 15
-        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong!Passw0rd" -Q "CREATE DATABASE yesql_test" -C || true
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -Q "CREATE DATABASE yesql_test" -C || true
       continue-on-error: true
     
     - name: Run tests
@@ -124,7 +124,7 @@ jobs:
         MSSQL_HOST: localhost
         MSSQL_PORT: 1433
         MSSQL_USER: sa
-        MSSQL_PASSWORD: YourStrong!Passw0rd
+        MSSQL_PASSWORD: YourStrong@Passw0rd
         MSSQL_DATABASE: yesql_test
       run: mix test
 

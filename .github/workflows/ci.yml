@@ -84,6 +84,17 @@ jobs:
     - name: Install dependencies
       run: mix deps.get
     
+    - name: Wait for MSSQL and create database
+      run: |
+        sudo apt-get update && sudo apt-get install -y mssql-tools18
+        for i in {1..30}; do
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q 'SELECT 1' -b -No -C && break
+          echo "Waiting for MSSQL to be ready..."
+          sleep 2
+        done
+        # Create yesql_test database
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q "CREATE DATABASE yesql_test" -C || true
+    
     - name: Run tests (PostgreSQL and core)
       env:
         POSTGRES_HOST: localhost

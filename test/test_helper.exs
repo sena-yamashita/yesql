@@ -39,13 +39,13 @@ if System.get_env("CI") || System.get_env("FULL_TEST") do
   if System.get_env("CI") do
     # Ectoアプリケーションを起動
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
-    
+
     # SQLiteとDuckDBは直接接続するため、Ectoリポジトリは不要
     sqlite_test = System.get_env("SQLITE_TEST") == "true"
     duckdb_test = System.get_env("DUCKDB_TEST") == "true"
     mysql_test = System.get_env("MYSQL_TEST") == "true"
     mssql_test = System.get_env("MSSQL_TEST") == "true"
-    
+
     # PostgreSQLリポジトリの起動（デフォルトまたは明示的に指定された場合）
     if !sqlite_test && !duckdb_test && !mysql_test && !mssql_test do
       # デフォルトはPostgreSQL
@@ -53,43 +53,49 @@ if System.get_env("CI") || System.get_env("FULL_TEST") do
         {:ok, _} ->
           Ecto.Migrator.run(Yesql.TestRepo.Postgres, "priv/repo/migrations", :up, all: true)
           IO.puts("PostgreSQL migrations completed")
+
         {:error, {:already_started, _}} ->
           Ecto.Migrator.run(Yesql.TestRepo.Postgres, "priv/repo/migrations", :up, all: true)
           IO.puts("PostgreSQL migrations completed (repo already started)")
+
         error ->
           IO.puts("Warning: Could not start PostgreSQL TestRepo: #{inspect(error)}")
       end
     end
-    
+
     # MySQLリポジトリの起動（MYSQL_TEST=true の場合）
     if mysql_test do
       case Yesql.TestRepo.MySQL.start_link() do
         {:ok, _} ->
           Ecto.Migrator.run(Yesql.TestRepo.MySQL, "priv/repo/migrations", :up, all: true)
           IO.puts("MySQL migrations completed")
+
         {:error, {:already_started, _}} ->
           Ecto.Migrator.run(Yesql.TestRepo.MySQL, "priv/repo/migrations", :up, all: true)
           IO.puts("MySQL migrations completed (repo already started)")
+
         error ->
           IO.puts("Warning: Could not start MySQL TestRepo: #{inspect(error)}")
       end
     end
-    
+
     # MSSQLリポジトリの起動（MSSQL_TEST=true の場合）
     if mssql_test do
       case Yesql.TestRepo.MSSQL.start_link() do
         {:ok, _} ->
           Ecto.Migrator.run(Yesql.TestRepo.MSSQL, "priv/repo/migrations", :up, all: true)
           IO.puts("MSSQL migrations completed")
+
         {:error, {:already_started, _}} ->
           Ecto.Migrator.run(Yesql.TestRepo.MSSQL, "priv/repo/migrations", :up, all: true)
           IO.puts("MSSQL migrations completed (repo already started)")
+
         error ->
           IO.puts("Warning: Could not start MSSQL TestRepo: #{inspect(error)}")
       end
     end
   end
-  
+
   ExUnit.start()
 else
   # ローカル環境では単体テストのみ実行
