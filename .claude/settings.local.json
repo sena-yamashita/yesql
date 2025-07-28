@@ -131,7 +131,9 @@
       "Bash(MIX_ENV=test mix run -e \"IO.inspect(Application.get_env(:yesql, Yesql.TestRepo.Postgres), label: \"\"Postgres config\"\")\")",
       "Bash(gh workflow view:*)",
       "Bash(mix format:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(./scripts/setup-local-ci.sh:*)",
+      "Bash(CI=true DEBUG_BATCH_TEST=true mix test test/batch_test.exs:135 --trace)"
     ],
     "deny": []
   }
