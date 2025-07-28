@@ -19,17 +19,8 @@ defmodule BatchTest do
             port: String.to_integer(System.get_env("POSTGRES_PORT", "5432"))
           )
 
-        # CI環境またはテーブルが存在しない場合は作成
-        create_table_sql = """
-        CREATE TABLE IF NOT EXISTS batch_test (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255),
-          value INTEGER,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-        
-        Postgrex.query!(conn, create_table_sql, [])
+        # Ectoマイグレーションでテーブルが作成されるはず
+        # CI環境でマイグレーションが実行されていない場合の対応はtest_helper.exsで行う
 
         [conn: conn, driver: :postgrex]
 

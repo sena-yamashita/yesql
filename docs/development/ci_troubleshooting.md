@@ -87,7 +87,7 @@ test "DuckDBでの::キャスト", %{duckdb: conn} do
 ]
 ```
 
-### 4. batch_testテーブル不存在エラー（最新）
+### 4. batch_testテーブル不存在エラー
 
 **問題**
 ```
@@ -95,12 +95,26 @@ ERROR 42P01 (undefined_table) relation "batch_test" does not exist
 ```
 
 **原因**
-- CI環境でbatch_testテーブルの作成が漏れている
-- setup_allでのテーブル作成処理が不足
+- CI環境でEctoマイグレーションが実行されていない
+- `priv/repo/migrations/20250127000001_create_test_tables.exs`にテーブル定義は存在
+- `.github/workflows/elixir.yml`で`mix ecto.migrate`が実行されていない
 
-**対応予定**
-- batch_test.exsのsetup_allを確認
-- テーブル作成処理を追加
+**対応**
+test_helper.exsでCI環境時にマイグレーションを実行：
+```elixir
+if System.get_env("CI") do
+  {:ok, _} = Application.ensure_all_started(:ecto_sql)
+  
+  case Yesql.TestRepo.Postgres.start_link() do
+    {:ok, _} ->
+      Ecto.Migrator.run(Yesql.TestRepo.Postgres, "priv/repo/migrations", :up, all: true)
+  end
+end
+```
+
+**注意**
+- 直接SQLでテーブルを作成するのは避ける（Ectoの設計思想に反する）
+- マイグレーションファイルが存在する場合は、それを使用する
 
 ## CI環境の特徴
 

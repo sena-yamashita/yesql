@@ -35,8 +35,26 @@ end
 
 # CI環境またはFULL_TESTが指定されている場合のみDBテストを実行
 if System.get_env("CI") || System.get_env("FULL_TEST") do
-  # Docker環境でのテスト時にデータベースをセットアップ
-  # 通常はmix yesql.test.setupを使用するので、ここでは何もしない
+  # CI環境でEctoマイグレーションを実行
+  if System.get_env("CI") do
+    # Ectoアプリケーションを起動
+    {:ok, _} = Application.ensure_all_started(:ecto_sql)
+    
+    # PostgreSQLテストリポジトリを起動してマイグレーションを実行
+    case Yesql.TestRepo.Postgres.start_link() do
+      {:ok, _} ->
+        # マイグレーションを実行
+        Ecto.Migrator.run(Yesql.TestRepo.Postgres, "priv/repo/migrations", :up, all: true)
+        IO.puts("PostgreSQL migrations completed")
+      {:error, {:already_started, _}} ->
+        # すでに起動している場合はマイグレーションのみ実行
+        Ecto.Migrator.run(Yesql.TestRepo.Postgres, "priv/repo/migrations", :up, all: true)
+        IO.puts("PostgreSQL migrations completed (repo already started)")
+      error ->
+        IO.puts("Warning: Could not start PostgreSQL TestRepo for migrations: #{inspect(error)}")
+    end
+  end
+  
   ExUnit.start()
 else
   # ローカル環境では単体テストのみ実行
