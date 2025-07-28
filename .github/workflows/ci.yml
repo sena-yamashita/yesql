@@ -8,6 +8,7 @@ on:
 
 env:
   MIX_ENV: test
+  CI: true
 
 jobs:
   test:
@@ -113,7 +114,7 @@ jobs:
         MSSQL_PORT: 1433
         MSSQL_USER: sa
         MSSQL_PASSWORD: YourStrong@Passw0rd
-        MSSQL_DATABASE: master
+        MSSQL_DATABASE: yesql_test
         MSSQL_TEST: true
       run: mix test --only mssql
 
